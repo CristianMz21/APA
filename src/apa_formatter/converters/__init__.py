@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from docx import Document
 
@@ -56,22 +57,22 @@ def docx_to_pdf(source_path: Path, output_path: Path) -> Path:
     return adapter.generate(output_path)
 
 
-def _extract_title(doc: Document) -> str:
+def _extract_title(doc: Any) -> str:
     """Extract the document title from the first non-empty centered paragraph."""
     for para in doc.paragraphs[:10]:
         text = para.text.strip()
         if text and len(text) > 3:
             # Check if the paragraph is bold (likely a title)
             if any(run.bold for run in para.runs if run.text.strip()):
-                return text
+                return str(text)
     # Fallback: use the first non-empty paragraph
     for para in doc.paragraphs:
         if para.text.strip():
-            return para.text.strip()
+            return str(para.text.strip())
     return "Untitled Document"
 
 
-def _extract_authors(doc: Document) -> list[str]:
+def _extract_authors(doc: Any) -> list[str]:
     """Extract author names from the title page area."""
     # Look for author-like text after the title
     found_title = False
@@ -89,10 +90,10 @@ def _extract_authors(doc: Document) -> list[str]:
     return ["Unknown Author"]
 
 
-def _extract_abstract(doc: Document) -> str | None:
+def _extract_abstract(doc: Any) -> str | None:
     """Extract abstract text from the document."""
     in_abstract = False
-    abstract_parts = []
+    abstract_parts: list[str] = []
 
     for para in doc.paragraphs:
         text = para.text.strip()
@@ -112,7 +113,7 @@ def _extract_abstract(doc: Document) -> str | None:
     return " ".join(abstract_parts) if abstract_parts else None
 
 
-def _extract_sections(doc: Document) -> list[Section]:
+def _extract_sections(doc: Any) -> list[Section]:
     """Extract body content as sections."""
     sections: list[Section] = []
     current_heading = None

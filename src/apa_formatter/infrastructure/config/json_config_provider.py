@@ -5,6 +5,7 @@ Wraps the existing config/loader.py logic.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from apa_formatter.domain.ports.config_provider import ConfigProviderPort
@@ -28,7 +29,7 @@ class JsonConfigProvider(ConfigProviderPort):
             if self._config_path:
                 from apa_formatter.config.loader import load_config
 
-                self._config = load_config(self._config_path)
+                self._config = load_config(Path(self._config_path))
             else:
                 self._config = get_config()
         return self._config

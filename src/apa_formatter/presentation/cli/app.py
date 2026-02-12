@@ -47,7 +47,9 @@ app.add_typer(config_app, name="config")
 @app.command()
 def create(
     title: Annotated[str, typer.Option("--title", "-t", help="Título del trabajo")],
-    author: Annotated[list[str], typer.Option("--author", "-a", help="Nombre(s) del autor")] = None,
+    author: Annotated[
+        Optional[list[str]], typer.Option("--author", "-a", help="Nombre(s) del autor")
+    ] = None,
     affiliation: Annotated[
         str, typer.Option("--affiliation", help="Afiliación institucional")
     ] = "Universidad",

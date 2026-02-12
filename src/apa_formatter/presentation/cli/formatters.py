@@ -14,7 +14,7 @@ from rich.syntax import Syntax
 from rich.table import Table
 
 if TYPE_CHECKING:
-    from apa_formatter.domain.ports.compliance_checker import ComplianceReport
+    from apa_formatter.validators.checker import ComplianceReport
 
 console = Console()
 

@@ -35,7 +35,7 @@ class Project(BaseModel):
 
     def to_dict(self) -> dict[str, Any]:
         """Return a JSON-safe dictionary representation."""
-        return json.loads(self.model_dump_json())
+        return dict(json.loads(self.model_dump_json()))
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "Project":

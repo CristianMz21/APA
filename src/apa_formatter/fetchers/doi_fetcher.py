@@ -5,9 +5,9 @@ from __future__ import annotations
 import re
 from typing import Optional
 
-import requests
+import requests  # type: ignore[import-untyped]
 
-from apa_formatter.models.document import Author, Reference
+from apa_formatter.models.document import Author, GroupAuthor, Reference
 from apa_formatter.models.enums import ReferenceType
 
 
@@ -67,7 +67,7 @@ def fetch_by_doi(doi: str) -> Reference:
     message = resp.json().get("message", {})
 
     # Parse authors
-    authors: list[Author] = []
+    authors: list[Author | GroupAuthor] = []
     for author_data in message.get("author", []):
         given = author_data.get("given", "")
         family = author_data.get("family", "")

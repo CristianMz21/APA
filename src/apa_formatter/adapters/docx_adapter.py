@@ -368,7 +368,11 @@ class DocxAdapter(BaseAdapter):
         # Sort references alphabetically by first author last name
         sorted_refs = sorted(
             self.doc.references,
-            key=lambda r: r.authors[0].last_name.lower() if r.authors else "",
+            key=lambda r: (
+                getattr(r.authors[0], "last_name", getattr(r.authors[0], "name", "")).lower()
+                if r.authors
+                else ""
+            ),
         )
 
         for ref in sorted_refs:

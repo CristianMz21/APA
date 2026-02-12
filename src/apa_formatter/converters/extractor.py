@@ -27,7 +27,7 @@ def extract_content_with_formatting(path: Path) -> APADocument:
 
     # Try to find title
     for para in doc.paragraphs[:5]:
-        if "Title" in (para.style.name or ""):
+        if "Title" in (para.style.name if para.style else ""):
             title = para.text.strip()
             break
         # Fallback: first centered bold paragraph
@@ -42,7 +42,7 @@ def extract_content_with_formatting(path: Path) -> APADocument:
     current_content: list[str] = []
 
     for para in doc.paragraphs:
-        style_name = (para.style.name or "").lower()
+        style_name = ((para.style.name) if para.style else "").lower()
         text = _extract_formatted_text(para).strip()
 
         if not text:

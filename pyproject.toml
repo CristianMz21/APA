@@ -46,3 +46,33 @@ pythonpath = ["src"]
 [tool.ruff]
 target-version = "py310"
 line-length = 100
+
+[tool.mypy]
+python_version = "3.10"
+plugins = ["pydantic.mypy"]
+ignore_missing_imports = true
+warn_return_any = true
+warn_unused_configs = true
+no_implicit_optional = true
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
+
+[[tool.mypy.overrides]]
+module = "apa_formatter.gui.*"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = "apa_formatter.presentation.gui.*"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = [
+    "requests", "requests.*",
+    "bs4", "bs4.*",
+    "apa_formatter.fetchers.*",
+]
+ignore_missing_imports = true
+disallow_untyped_defs = false

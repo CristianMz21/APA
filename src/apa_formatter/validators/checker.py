@@ -161,7 +161,9 @@ class APAChecker:
 
         # Sample body paragraphs for font consistency
         body_paras = [
-            p for p in self._doc.paragraphs if p.text.strip() and p.style.name == "Normal"
+            p
+            for p in self._doc.paragraphs
+            if p.text.strip() and p.style and p.style.name == "Normal"
         ]
         inconsistent_count = 0
         for p in body_paras[:20]:  # Sample first 20 paragraphs

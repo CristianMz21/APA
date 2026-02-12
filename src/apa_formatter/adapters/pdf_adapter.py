@@ -261,7 +261,11 @@ class PdfAdapter(BaseAdapter):
 
         sorted_refs = sorted(
             self.doc.references,
-            key=lambda r: r.authors[0].last_name.lower() if r.authors else "",
+            key=lambda r: (
+                getattr(r.authors[0], "last_name", getattr(r.authors[0], "name", "")).lower()
+                if r.authors
+                else ""
+            ),
         )
 
         self._pdf.set_font(self._mapped_font, "", self._font_spec.size_pt)

@@ -5,9 +5,9 @@ from __future__ import annotations
 import re
 from typing import Optional
 
-import requests
+import requests  # type: ignore[import-untyped]
 
-from apa_formatter.models.document import Author, Reference
+from apa_formatter.models.document import Author, GroupAuthor, Reference
 from apa_formatter.models.enums import ReferenceType
 
 
@@ -58,7 +58,7 @@ def fetch_by_isbn(isbn: str) -> Reference:
     book = data[key]
 
     # Parse authors
-    authors: list[Author] = []
+    authors: list[Author | GroupAuthor] = []
     for author_data in book.get("authors", []):
         name = author_data.get("name", "")
         parts = name.rsplit(" ", 1)

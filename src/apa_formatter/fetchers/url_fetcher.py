@@ -6,10 +6,10 @@ import re
 from datetime import date
 from typing import Optional
 
-import requests
+import requests  # type: ignore[import-untyped]
 from bs4 import BeautifulSoup
 
-from apa_formatter.models.document import Author, Reference
+from apa_formatter.models.document import Author, GroupAuthor, Reference
 from apa_formatter.models.enums import ReferenceType
 
 
@@ -26,11 +26,11 @@ def _extract_meta(soup: BeautifulSoup, *names: str) -> Optional[str]:
         # Try name attribute
         tag = soup.find("meta", attrs={"name": name})
         if tag and tag.get("content"):
-            return tag["content"].strip()
+            return str(tag["content"]).strip()
         # Try property attribute (Open Graph)
         tag = soup.find("meta", attrs={"property": name})
         if tag and tag.get("content"):
-            return tag["content"].strip()
+            return str(tag["content"]).strip()
     return None
 
 
@@ -86,7 +86,7 @@ def fetch_by_url(url: str) -> Reference:
 
     # Author
     author_str = _extract_meta(soup, "author", "dc.creator", "article:author")
-    authors: list[Author] = []
+    authors: list[Author | GroupAuthor] = []
     if author_str:
         authors = [_parse_author_name(author_str)]
 
