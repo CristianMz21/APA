@@ -1,0 +1,324 @@
+{
+    "metadata": {
+        "norma": "APA",
+        "edicion": "7ma",
+        "idioma": "Español",
+        "descripcion": "Reglas extraídas del Instructivo uso del estilo APA 7ª edición - SENA",
+        "fuente_origen": "Instructivo uso del estilo APA 7ª edición - SENA 2020"
+    },
+    "metadatos_norma": {
+        "institucion": "Servicio Nacional de Aprendizaje (SENA)",
+        "base": "APA 7ma Edición",
+        "fuente_documento": "Instructivo uso del estilo APA 7ª edición",
+        "año_documento": 2020
+    },
+    "configuracion_pagina": {
+        "tamaño_papel": {
+            "nombre": "Carta",
+            "ancho_cm": 21.59,
+            "alto_cm": 27.94,
+            "nota": "Equivalente a 8 1/2 x 11 pulgadas"
+        },
+        "margenes": {
+            "superior_cm": 2.54,
+            "inferior_cm": 2.54,
+            "izquierda_cm": 2.54,
+            "derecha_cm": 2.54,
+            "nota": "1 pulgada en todos los lados",
+            "condicion_empaste": {
+                "descripcion": "Cuando se requiera empastar el trabajo",
+                "izquierda_cm": 4.0,
+                "nota": "El margen superior de la primera página de cada capítulo no puede ser más amplio que otros"
+            }
+        },
+        "paginacion": {
+            "ubicacion": "esquina_superior_derecha",
+            "inicio": "portada",
+            "formato": "numeros_arabigos"
+        }
+    },
+    "fuentes_y_tipografia": {
+        "fuentes_aceptadas": [
+            {
+                "tipo": "sans_serif",
+                "nombre": "Calibri",
+                "tamaño_pt": 11
+            },
+            {
+                "tipo": "sans_serif",
+                "nombre": "Arial",
+                "tamaño_pt": 11
+            },
+            {
+                "tipo": "sans_serif",
+                "nombre": "Lucida Sans Unicode",
+                "tamaño_pt": 10
+            },
+            {
+                "tipo": "serif",
+                "nombre": "Times New Roman",
+                "tamaño_pt": 12
+            },
+            {
+                "tipo": "serif",
+                "nombre": "Georgia",
+                "tamaño_pt": 11
+            }
+        ],
+        "excepciones": {
+            "figuras": {
+                "tipo": "sans_serif",
+                "tamaño_min_pt": 8,
+                "tamaño_max_pt": 14
+            },
+            "codigo_fuente": {
+                "fuentes": [
+                    "Lucida Console",
+                    "Courier New"
+                ],
+                "tamaño_pt": 10,
+                "tipo": "monoespaciada"
+            },
+            "notas_al_pie": {
+                "tamaño": "menor_al_texto",
+                "interlineado": "sencillo"
+            }
+        }
+    },
+    "formato_texto": {
+        "alineacion": "izquierda",
+        "justificado": false,
+        "interlineado_general": 2.0,
+        "sangria_parrafo": {
+            "medida_cm": 1.27,
+            "tipo": "primera_linea",
+            "nota": "Equivalente a 0.5 pulgadas o 5 espacios"
+        },
+        "espaciado_parrafos": {
+            "anterior_pt": 0,
+            "posterior_pt": 0,
+            "nota": "No agregar espacio extra entre párrafos"
+        }
+    },
+    "jerarquia_titulos": [
+        {
+            "nivel": 1,
+            "formato": {
+                "alineacion": "centrado",
+                "negrita": true,
+                "cursiva": false,
+                "punto_final": false
+            },
+            "inicio_texto": "nuevo_parrafo"
+        },
+        {
+            "nivel": 2,
+            "formato": {
+                "alineacion": "izquierda",
+                "negrita": true,
+                "cursiva": false,
+                "punto_final": false
+            },
+            "inicio_texto": "nuevo_parrafo"
+        },
+        {
+            "nivel": 3,
+            "formato": {
+                "alineacion": "izquierda",
+                "negrita": true,
+                "cursiva": true,
+                "punto_final": false
+            },
+            "inicio_texto": "nuevo_parrafo"
+        },
+        {
+            "nivel": 4,
+            "formato": {
+                "alineacion": "izquierda",
+                "sangria_cm": 1.27,
+                "negrita": true,
+                "cursiva": false,
+                "punto_final": true
+            },
+            "inicio_texto": "misma_linea"
+        },
+        {
+            "nivel": 5,
+            "formato": {
+                "alineacion": "izquierda",
+                "sangria_cm": 1.27,
+                "negrita": true,
+                "cursiva": true,
+                "punto_final": true
+            },
+            "inicio_texto": "misma_linea"
+        }
+    ],
+    "elementos_documento": {
+        "orden_secciones": [
+            "portada",
+            "resumen",
+            "texto",
+            "referencias",
+            "notas",
+            "tablas",
+            "figuras",
+            "apendice"
+        ],
+        "portada": {
+            "estudiante": [
+                "numero_pagina",
+                "titulo_trabajo",
+                "autores",
+                "afiliacion_universidad",
+                "nombre_curso",
+                "instructor",
+                "fecha"
+            ],
+            "profesional": [
+                "numero_pagina",
+                "titulo_corto_header",
+                "titulo_trabajo",
+                "autores",
+                "afiliacion",
+                "nota_autor"
+            ]
+        },
+        "resumen": {
+            "titulo": "Resumen",
+            "formato_titulo": "centrado_negrita",
+            "limite_palabras_min": 150,
+            "limite_palabras_max": 250,
+            "sangria_primera_linea": false,
+            "palabras_clave": {
+                "etiqueta": "Palabras clave:",
+                "formato_etiqueta": "cursiva",
+                "sangria": true
+            }
+        }
+    },
+    "citas": {
+        "reglas_generales": {
+            "sistema": "autor-fecha",
+            "fuentes_secundarias_texto": "como se citó en"
+        },
+        "cita_textual_corta": {
+            "max_palabras": 39,
+            "formato": "entre_comillas",
+            "ubicacion": "integrada_en_texto",
+            "requiere": [
+                "apellido",
+                "año",
+                "pagina"
+            ]
+        },
+        "cita_textual_bloque": {
+            "min_palabras": 40,
+            "formato": "bloque_aparte",
+            "comillas": false,
+            "sangria_bloque_cm": 1.27,
+            "sangria_parrafos_adicionales_cm": 1.27,
+            "interlineado": 2.0,
+            "ubicacion_punto": "antes_del_parentesis"
+        },
+        "parafraseo": {
+            "requiere": [
+                "apellido",
+                "año"
+            ],
+            "recomendado": [
+                "pagina_o_parrafo"
+            ]
+        },
+        "autores": {
+            "un_autor": "Apellido (Año)",
+            "dos_autores": "Apellido1 y Apellido2 (Año)",
+            "tres_o_mas_autores": "Apellido1 et al. (Año)",
+            "corporativo_primera_vez": "Nombre Completo [Siglas] (Año)",
+            "corporativo_siguientes": "Siglas (Año)"
+        }
+    },
+    "referencias": {
+        "formato_lista": {
+            "titulo": "Referencias",
+            "alineacion_titulo": "centrado_negrita",
+            "orden": "alfabetico_autor",
+            "sangria_francesa_cm": 1.27,
+            "interlineado": 2.0
+        },
+        "limite_autores_mostrar": {
+            "hasta": 20,
+            "regla_mas_de_20": "listar_primeros_19_y_ultimo"
+        },
+        "elementos_basicos": [
+            "autor",
+            "fecha",
+            "titulo",
+            "fuente"
+        ],
+        "casos_especiales": {
+            "sin_fecha": "s.f.",
+            "doi_url": "sin_saltos_manuales"
+        }
+    },
+    "tablas_y_figuras": {
+        "numeracion": {
+            "estilo": "negrita",
+            "ejemplo": "Tabla 1"
+        },
+        "titulo": {
+            "ubicacion": "debajo_numero",
+            "estilo": "cursiva",
+            "interlineado": 2.0
+        },
+        "tablas": {
+            "bordes": "solo_horizontales_principales",
+            "bordes_verticales": false
+        },
+        "notas": {
+            "prefijo": "Nota.",
+            "estilo_prefijo": "cursiva",
+            "contenido": "derechos_autor_explicaciones"
+        },
+        "fuente_contenido": {
+            "tamaño_pt": 10,
+            "tipo": "Misma fuente que el documento"
+        },
+        "formato_visual": {
+            "lineas_horizontales": 3,
+            "lineas_verticales": false,
+            "descripcion": "Solo línea superior, inferior y separador de cabecera"
+        }
+    },
+    "referencias_legales_colombia": {
+        "descripcion": "Adaptación del Bluebook para el contexto legal colombiano según SENA",
+        "formatos_plantilla": {
+            "constitucion": {
+                "plantilla": "{NombreOficial} [{Abreviacion}]. Art. {Articulo}. {FechaPromulgacion} ({Pais}).",
+                "ejemplo": "Constitución Política de Colombia [Const]. Art. 6. 7 de julio de 1991 (Colombia)."
+            },
+            "leyes": {
+                "plantilla": "Ley {Numero} de {Año}. {Asunto}. {FechaPromulgacion}. DO. N° {DiarioOficial}",
+                "ejemplo": "Ley 100 de 1993. Por la cual se crea el sistema de seguridad social integral... Diciembre 23 de 1993. DO. N° 41.148"
+            },
+            "codigos": {
+                "plantilla": "{TituloOficial} [{Abreviacion}]. {LeyCorrespondiente}. {Articulos}. {FechaPromulgacion} ({Pais}).",
+                "ejemplo": "Código Penal Colombiano [CPC]. Ley 599 de 2000. Julio 24 de 2000 (Colombia)."
+            },
+            "sentencias": {
+                "plantilla": "{Tribunal}, {SalaOSeccion}. Sentencia {Numero} ({MagistradoPonente}; {Fecha}).",
+                "ejemplo": "Corte Constitucional, Sala octava de revisión. Sentencia T-344/16 (MP. Alberto Rojas Ríos; 30 de junio de 2016)."
+            },
+            "actos_administrativos": {
+                "tipos": [
+                    "Decreto",
+                    "Ordenanza",
+                    "Acuerdo",
+                    "Resolución"
+                ],
+                "plantilla": "{Tipo} {Numero} de {Año} [{EntePromulgador}]. {Asunto}. {FechaPromulgacion}.",
+                "ejemplo": "Acuerdo 003 de 2013 [Servicio Nacional de Aprendizaje SENA]. Por el cual se adopta la Política Nacional de Calidad en el SENA. Mayo 10 de 2013"
+            }
+        }
+    }
+}
