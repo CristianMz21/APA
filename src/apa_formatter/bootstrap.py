@@ -19,6 +19,7 @@ from apa_formatter.domain.ports.reference_repository import ReferenceRepositoryP
 from apa_formatter.infrastructure.checkers.docx_checker import DocxComplianceChecker
 from apa_formatter.infrastructure.clipboard.system_clipboard import SystemClipboard
 from apa_formatter.infrastructure.config.json_config_provider import JsonConfigProvider
+from apa_formatter.infrastructure.config.settings_manager import SettingsManager
 from apa_formatter.infrastructure.fetchers.doi_fetcher import DoiFetcher
 from apa_formatter.infrastructure.fetchers.isbn_fetcher import IsbnFetcher
 from apa_formatter.infrastructure.fetchers.url_fetcher import UrlFetcher
@@ -64,6 +65,8 @@ class Container:
         self._isbn_fetcher = IsbnFetcher()
         self._url_fetcher = UrlFetcher()
 
+        self._settings_manager = SettingsManager()
+
     # -- Port accessors ------------------------------------------------------
 
     @property
@@ -85,6 +88,14 @@ class Container:
     @property
     def compliance_checker(self) -> ComplianceCheckerPort:
         return self._compliance_checker
+
+    @property
+    def settings_manager(self) -> SettingsManager:
+        return self._settings_manager
+
+    @property
+    def user_settings(self) -> Any:
+        return self._settings_manager.load()
 
     def get_renderer(self, fmt: OutputFormat) -> DocumentRendererPort:
         """Return the renderer for the given output format."""

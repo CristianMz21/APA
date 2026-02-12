@@ -67,3 +67,33 @@ class OutputFormat(str, Enum):
 
     DOCX = "docx"
     PDF = "pdf"
+
+
+# ---------------------------------------------------------------------------
+# User Settings Enums
+# ---------------------------------------------------------------------------
+
+
+class FontFamily(str, Enum):
+    """Font families available for user preferences."""
+
+    TIMES_NEW_ROMAN = "Times New Roman"
+    ARIAL = "Arial"
+    CALIBRI = "Calibri"
+    GEORGIA = "Georgia"
+    LUCIDA_SANS_UNICODE = "Lucida Sans Unicode"
+    COMPUTER_MODERN = "Computer Modern"
+
+
+class Language(str, Enum):
+    """Supported UI languages."""
+
+    ES = "es"
+    EN = "en"
+
+
+class ExportFormat(str, Enum):
+    """Default export format preference."""
+
+    DOCX = "docx"
+    PDF = "pdf"

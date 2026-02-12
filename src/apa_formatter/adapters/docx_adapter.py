@@ -29,10 +29,11 @@ from apa_formatter.rules.constants import (
 class DocxAdapter(BaseAdapter):
     """Generate APA 7 formatted Word documents using python-docx."""
 
-    def __init__(self, document: APADocument, config=None) -> None:
+    def __init__(self, document: APADocument, config=None, user_settings=None) -> None:
         super().__init__(document, config=config)
         self._docx = Document()
         self._font_spec = self._get_font_spec()
+        self._user_settings = user_settings
 
     # ------------------------------------------------------------------
     # Public API
@@ -250,8 +251,9 @@ class DocxAdapter(BaseAdapter):
                 note_body = self._add_paragraph(tp.author_note)
                 note_body.paragraph_format.first_line_indent = Inches(FIRST_LINE_INDENT_INCHES)
 
-        # Page break after title page
-        self._add_page_break()
+        # Page break after title page (conditional on user settings)
+        if self._user_settings is None or self._user_settings.document.force_title_page_break:
+            self._add_page_break()
 
     # ------------------------------------------------------------------
     # Abstract

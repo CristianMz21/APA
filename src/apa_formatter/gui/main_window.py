@@ -37,6 +37,8 @@ from apa_formatter.gui.widgets.document_form import DocumentFormWidget
 from apa_formatter.gui.widgets.preview import APAPreviewWidget
 from apa_formatter.config.loader import load_config
 from apa_formatter.config.models import APAConfig
+from apa_formatter.domain.models.settings import UserSettings
+from apa_formatter.infrastructure.config.settings_manager import SettingsManager
 from apa_formatter.models.document import APADocument
 from apa_formatter.models.enums import (
     DocumentVariant,
@@ -57,6 +59,10 @@ class APAMainWindow(QMainWindow):
         self._font_choice = FontChoice.TIMES_NEW_ROMAN
         self._variant = DocumentVariant.STUDENT
         self._active_config: APAConfig = load_config()
+
+        # User preferences (persisted to OS config dir)
+        self._settings_manager = SettingsManager()
+        self._user_settings: UserSettings = self._settings_manager.load()
 
         # --- Widgets -------------------------------------------------------
         self.form = DocumentFormWidget()
@@ -189,6 +195,9 @@ class APAMainWindow(QMainWindow):
         act_config = tools_menu.addAction("⚙️ Configuración…")
         act_config.triggered.connect(self._on_config)
 
+        act_settings = tools_menu.addAction("🔧 Preferencias…")
+        act_settings.triggered.connect(self._on_settings)
+
         act_info = tools_menu.addAction("ℹ️ Info y Demo…")
         act_info.triggered.connect(self._on_info_demo)
 
@@ -282,7 +291,11 @@ class APAMainWindow(QMainWindow):
         try:
             from apa_formatter.adapters.docx_adapter import DocxAdapter
 
-            adapter = DocxAdapter(self._current_doc, config=self._build_effective_config())
+            adapter = DocxAdapter(
+                self._current_doc,
+                config=self._build_effective_config(),
+                user_settings=self._user_settings,
+            )
             adapter.generate(Path(path))
             self.statusBar().showMessage(f"✅  Exportado: {path}")
         except Exception as exc:
@@ -305,7 +318,11 @@ class APAMainWindow(QMainWindow):
         try:
             from apa_formatter.adapters.pdf_adapter import PdfAdapter
 
-            adapter = PdfAdapter(self._current_doc, config=self._build_effective_config())
+            adapter = PdfAdapter(
+                self._current_doc,
+                config=self._build_effective_config(),
+                user_settings=self._user_settings,
+            )
             adapter.generate(Path(path))
             self.statusBar().showMessage(f"✅  Exportado: {path}")
         except Exception as exc:
@@ -327,6 +344,20 @@ class APAMainWindow(QMainWindow):
         dlg = ConfigPanel(self)
         dlg.config_changed.connect(self._on_config_changed)
         dlg.exec()
+
+    def _on_settings(self) -> None:
+        from apa_formatter.gui.widgets.settings_dialog import SettingsDialog
+
+        dlg = SettingsDialog(self._settings_manager, parent=self)
+        dlg.settings_changed.connect(self._on_settings_changed)
+        dlg.exec()
+
+    def _on_settings_changed(self, settings: UserSettings) -> None:
+        self._user_settings = settings
+        self.statusBar().showMessage("✅  Preferencias actualizadas")
+        # Refresh live preview with new settings
+        if self._live_enabled:
+            self._on_live_preview()
 
     def _on_config_changed(self, config: APAConfig) -> None:
         self._active_config = config
