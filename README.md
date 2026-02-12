@@ -31,7 +31,7 @@ apa convert paper.docx --to pdf
 - ✅ Running head y numeración de páginas
 - ✅ Lista de referencias con sangría francesa
 - ✅ Generación Word (.docx) y PDF
-# APA
+
 
 ## Licencia
 
