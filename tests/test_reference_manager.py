@@ -1,6 +1,5 @@
 """Tests for Sprint 2: year disambiguation, secondary citations, personal communications."""
 
-
 from apa_formatter.models.document import (
     Author,
     Citation,
