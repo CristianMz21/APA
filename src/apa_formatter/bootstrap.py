@@ -35,6 +35,14 @@ from apa_formatter.application.use_cases.fetch_metadata import FetchMetadataUseC
 from apa_formatter.application.use_cases.generate_demo import GenerateDemoUseCase
 from apa_formatter.application.use_cases.manage_references import ManageReferencesUseCase
 
+# Optional AI import (graceful when google-genai not installed)
+try:
+    from apa_formatter.infrastructure.ai.gemini_client import GeminiClient as _GeminiClient
+
+    _HAS_AI = True
+except ImportError:
+    _HAS_AI = False
+
 
 class Container:
     """Simple dependency injection container.
@@ -66,6 +74,14 @@ class Container:
         self._url_fetcher = UrlFetcher()
 
         self._settings_manager = SettingsManager()
+
+        # Optional AI client
+        self._gemini_client: object | None = None
+        if _HAS_AI:
+            try:
+                self._gemini_client = _GeminiClient()
+            except Exception:
+                pass  # No API key or other config issue — AI unavailable
 
     # -- Port accessors ------------------------------------------------------
 
@@ -141,3 +157,15 @@ class Container:
     def fetch_metadata(self, kind: str = "doi") -> FetchMetadataUseCase:
         """Create a use case for metadata fetching."""
         return FetchMetadataUseCase(fetcher=self.get_fetcher(kind))
+
+    # -- AI-powered import ---------------------------------------------------
+
+    @property
+    def has_ai(self) -> bool:
+        """True if Gemini AI integration is available."""
+        return self._gemini_client is not None
+
+    @property
+    def gemini_client(self) -> object | None:
+        """Return the Gemini client (or None if unavailable)."""
+        return self._gemini_client

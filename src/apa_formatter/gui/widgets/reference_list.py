@@ -9,6 +9,7 @@ from __future__ import annotations
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QAbstractItemView,
+    QApplication,
     QHBoxLayout,
     QHeaderView,
     QPushButton,
@@ -59,9 +60,14 @@ class ReferenceListWidget(QWidget):
         btn_sort.setToolTip("Ordenar alfabéticamente por apellido del primer autor")
         btn_sort.clicked.connect(self._on_sort)
 
+        btn_copy = QPushButton("📋 Copiar APA")
+        btn_copy.setToolTip("Copiar la referencia seleccionada en formato APA")
+        btn_copy.clicked.connect(self._on_copy)
+
         btn_row.addWidget(btn_add)
         btn_row.addWidget(btn_edit)
         btn_row.addWidget(btn_delete)
+        btn_row.addWidget(btn_copy)
         btn_row.addStretch()
         btn_row.addWidget(btn_sort)
         layout.addLayout(btn_row)
@@ -112,6 +118,17 @@ class ReferenceListWidget(QWidget):
         self._references.sort(key=lambda r: r.authors[0].last_name.lower() if r.authors else "")
         self._refresh_table()
         self.references_changed.emit()
+
+    def _on_copy(self) -> None:
+        """Copy the selected reference in APA format to the clipboard."""
+        row = self._table.currentRow()
+        if row < 0 or row >= len(self._references):
+            return
+        ref = self._references[row]
+        formatted = ref.format_apa()
+        clipboard = QApplication.clipboard()
+        if clipboard:
+            clipboard.setText(formatted)
 
     # ── Internal ──────────────────────────────────────────────────────────
 

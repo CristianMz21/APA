@@ -66,6 +66,10 @@ class SystemSettings(BaseModel):
         default=ExportFormat.DOCX,
         description="Default export format when saving documents.",
     )
+    dark_mode: bool = Field(
+        default=False,
+        description="Use dark theme.",
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -23,6 +23,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from apa_formatter.gui.theme import Theme
+
 
 class CheckerDialog(QDialog):
     """Dialog that checks a .docx file for APA 7 compliance."""
@@ -72,17 +74,18 @@ class CheckerDialog(QDialog):
         btn_close.clicked.connect(self.accept)
         layout.addWidget(btn_close, alignment=Qt.AlignmentFlag.AlignRight)
 
-        self.setStyleSheet(_CHECKER_STYLE)
+        self.setStyleSheet(Theme.dialog() + Theme.table())
 
     def _on_browse(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
-            self, "Abrir documento .docx", "", "Word Documents (*.docx)"
+            self, "Abrir documento", "", "Documentos (*.docx *.pdf)"
         )
         if not path:
             return
 
         self._path_label.setText(path)
-        self._path_label.setStyleSheet("color: #333;")
+        p = Theme.palette()
+        self._path_label.setStyleSheet(f"color: {p.text_primary};")
         self._run_check(Path(path))
 
     def _run_check(self, path: Path) -> None:
@@ -93,27 +96,35 @@ class CheckerDialog(QDialog):
             report = checker.check()
         except Exception as exc:
             self._status_label.setText(f"❌ Error: {exc}")
-            self._status_label.setStyleSheet("font-size: 12pt; font-weight: bold; color: #c0392b;")
+            p = Theme.palette()
+            self._status_label.setStyleSheet(
+                f"font-size: 12pt; font-weight: bold; color: {p.error};"
+            )
             return
 
         # Score bar
         score = report.score
         self._score_bar.setValue(int(score))
+        p = Theme.palette()
         if score >= 80:
-            bar_color = "#27ae60"
+            bar_color = p.success
         elif score >= 60:
-            bar_color = "#f39c12"
+            bar_color = p.warning
         else:
-            bar_color = "#c0392b"
+            bar_color = p.error
         self._score_bar.setStyleSheet(f"QProgressBar::chunk {{ background-color: {bar_color}; }}")
 
         # Status
         if report.is_compliant:
             self._status_label.setText("✅ CUMPLE — APA 7 Compliant")
-            self._status_label.setStyleSheet("font-size: 14pt; font-weight: bold; color: #27ae60;")
+            self._status_label.setStyleSheet(
+                f"font-size: 14pt; font-weight: bold; color: {p.success};"
+            )
         else:
             self._status_label.setText("❌ NO CUMPLE — Issues Found")
-            self._status_label.setStyleSheet("font-size: 14pt; font-weight: bold; color: #c0392b;")
+            self._status_label.setStyleSheet(
+                f"font-size: 14pt; font-weight: bold; color: {p.error};"
+            )
 
         # Results table
         results = report.results
@@ -132,39 +143,3 @@ class CheckerDialog(QDialog):
                     if item:
                         item.setBackground(Qt.GlobalColor.transparent)
                         item.setForeground(Qt.GlobalColor.darkRed)
-
-
-_CHECKER_STYLE = """
-QDialog { background: white; }
-QTableWidget {
-    border: 1px solid #CCCCCC;
-    font-size: 10pt;
-    gridline-color: #EEEEEE;
-}
-QHeaderView::section {
-    background: #F5F5F5;
-    border: 1px solid #DDDDDD;
-    padding: 4px;
-    font-weight: bold;
-    font-size: 9pt;
-}
-QProgressBar {
-    border: 1px solid #CCCCCC;
-    border-radius: 4px;
-    text-align: center;
-    font-weight: bold;
-    font-size: 11pt;
-}
-QProgressBar::chunk {
-    border-radius: 3px;
-}
-QPushButton {
-    background: #4A90D9;
-    color: white;
-    border: none;
-    border-radius: 3px;
-    padding: 6px 14px;
-    font-size: 10pt;
-}
-QPushButton:hover { background: #357ABD; }
-"""

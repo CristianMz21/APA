@@ -37,11 +37,27 @@ else
     echo "✅ Dependencies already installed."
 fi
 
-# --- 4. Launch GUI ---
+# --- 4. Pre-launch Compilation Check ---
+echo "� Verifying module compilation..."
+COMPILE_OUTPUT=$(python -c "import apa_formatter.gui.app" 2>&1)
+COMPILE_EXIT=$?
+
+if [ $COMPILE_EXIT -ne 0 ]; then
+    echo ""
+    echo "════════════════════════════════════════════════════"
+    echo "❌ COMPILATION ERROR — GUI will NOT be launched"
+    echo "════════════════════════════════════════════════════"
+    echo ""
+    echo "$COMPILE_OUTPUT"
+    echo ""
+    echo "════════════════════════════════════════════════════"
+    echo "Fix the errors above and try again."
+    exit 1
+fi
+echo "✅ Module compiled successfully."
+
+# --- 5. Launch GUI ---
 echo "🚀 Starting GUI Application..."
-# Using the console script defined in pyproject.toml is preferred if in PATH, 
-# but python -m is robust.
-# Let's try to use the console script first, fall back to python -m
 if command -v apa-gui &> /dev/null; then
     apa-gui "$@"
 else

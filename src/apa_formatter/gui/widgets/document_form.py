@@ -93,7 +93,7 @@ class DocumentFormWidget(QWidget):
         # Wire live-preview: connect sub-widget changes → document_changed
         self._connect_change_signals()
 
-        self.setStyleSheet(_FORM_STYLE)
+        self.setStyleSheet(_get_form_style())
 
     def _connect_change_signals(self) -> None:
         """Connect sub-widget signals to emit document_changed for live preview."""
@@ -698,7 +698,7 @@ class _OpcionesTab(QWidget):
             sb.setDecimals(2)
             sb.setSuffix(" cm")
             sb.setValue(2.54)
-            sb.valueChanged.connect(self.options_changed.emit)
+            sb.valueChanged.connect(lambda _: self.options_changed.emit())
 
         pg.addRow("Margen superior:", self._margin_top)
         pg.addRow("Margen inferior:", self._margin_bottom)
@@ -718,8 +718,21 @@ class _OpcionesTab(QWidget):
         self._binding_left.setSuffix(" cm")
         self._binding_left.setValue(4.0)
         self._binding_left.setEnabled(False)
-        self._binding_left.valueChanged.connect(self.options_changed.emit)
+        self._binding_left.valueChanged.connect(lambda _: self.options_changed.emit())
         pg.addRow("  Margen empaste izq:", self._binding_left)
+
+        # Page size selector
+        self._page_size = QComboBox()
+        self._page_size.addItems(
+            [
+                "Carta (21.59 × 27.94 cm)",
+                "Letter (21.59 × 27.94 cm)",
+                "A4 (21.0 × 29.7 cm)",
+                "Legal (21.59 × 35.56 cm)",
+            ]
+        )
+        self._page_size.currentTextChanged.connect(lambda: self.options_changed.emit())
+        pg.addRow("Tamaño de página:", self._page_size)
 
         layout.addWidget(page_group)
 
@@ -733,12 +746,27 @@ class _OpcionesTab(QWidget):
         self._alignment.currentTextChanged.connect(lambda: self.options_changed.emit())
         tg.addRow("Alineación:", self._alignment)
 
+        # Font selector (APA 7 accepted fonts)
+        self._font_select = QComboBox()
+        self._font_select.addItems(
+            [
+                "Times New Roman (12pt)",
+                "Calibri (11pt)",
+                "Arial (11pt)",
+                "Georgia (11pt)",
+                "Lucida Sans Unicode (10pt)",
+                "Computer Modern (10pt)",
+            ]
+        )
+        self._font_select.currentTextChanged.connect(lambda: self.options_changed.emit())
+        tg.addRow("Fuente:", self._font_select)
+
         self._line_spacing = QDoubleSpinBox()
         self._line_spacing.setRange(1.0, 3.0)
         self._line_spacing.setSingleStep(0.5)
         self._line_spacing.setDecimals(1)
         self._line_spacing.setValue(2.0)
-        self._line_spacing.valueChanged.connect(self.options_changed.emit)
+        self._line_spacing.valueChanged.connect(lambda _: self.options_changed.emit())
         tg.addRow("Interlineado:", self._line_spacing)
 
         self._indent = QDoubleSpinBox()
@@ -747,21 +775,21 @@ class _OpcionesTab(QWidget):
         self._indent.setDecimals(2)
         self._indent.setSuffix(" cm")
         self._indent.setValue(1.27)
-        self._indent.valueChanged.connect(self.options_changed.emit)
+        self._indent.valueChanged.connect(lambda _: self.options_changed.emit())
         tg.addRow("Sangría primera línea:", self._indent)
 
         self._space_before = QSpinBox()
         self._space_before.setRange(0, 24)
         self._space_before.setSuffix(" pt")
         self._space_before.setValue(0)
-        self._space_before.valueChanged.connect(self.options_changed.emit)
+        self._space_before.valueChanged.connect(lambda _: self.options_changed.emit())
         tg.addRow("Espacio antes párrafo:", self._space_before)
 
         self._space_after = QSpinBox()
         self._space_after.setRange(0, 24)
         self._space_after.setSuffix(" pt")
         self._space_after.setValue(0)
-        self._space_after.valueChanged.connect(self.options_changed.emit)
+        self._space_after.valueChanged.connect(lambda _: self.options_changed.emit())
         tg.addRow("Espacio después párrafo:", self._space_after)
 
         layout.addWidget(text_group)
@@ -774,10 +802,25 @@ class _OpcionesTab(QWidget):
         self._toc.toggled.connect(lambda: self.options_changed.emit())
         dg.addWidget(self._toc)
 
-        tip = QLabel(
-            "La TOC se inserta después de la portada y antes del resumen.\n"
-            "En Word, actualice el campo al abrir el documento."
+        # Running head
+        self._running_head = QCheckBox("Incluir encabezado de página (running head)")
+        self._running_head.toggled.connect(lambda: self.options_changed.emit())
+        dg.addWidget(self._running_head)
+
+        # Page numbering
+        num_row = QHBoxLayout()
+        num_label = QLabel("Numeración:")
+        num_label.setStyleSheet("font-weight: bold;")
+        num_row.addWidget(num_label)
+        self._page_num_pos = QComboBox()
+        self._page_num_pos.addItems(
+            ["Esquina superior derecha", "Centro inferior", "Sin numeración"]
         )
+        self._page_num_pos.currentTextChanged.connect(lambda: self.options_changed.emit())
+        num_row.addWidget(self._page_num_pos)
+        dg.addLayout(num_row)
+
+        tip = QLabel("Configuración del documento para exportación APA 7.")
         tip.setStyleSheet("color: #888; font-style: italic; font-size: 9pt;")
         dg.addWidget(tip)
 
@@ -808,12 +851,16 @@ class _OpcionesTab(QWidget):
             "margin_right_cm": self._margin_right.value(),
             "binding_enabled": self._binding.isChecked(),
             "binding_left_cm": self._binding_left.value(),
+            "page_size": self._page_size.currentText().split(" (")[0],
             "alignment": self._alignment.currentText().lower(),
+            "font_name": self._font_select.currentText().split(" (")[0],
             "line_spacing": self._line_spacing.value(),
             "indent_cm": self._indent.value(),
             "space_before_pt": self._space_before.value(),
             "space_after_pt": self._space_after.value(),
             "include_toc": self._toc.isChecked(),
+            "running_head": self._running_head.isChecked(),
+            "page_num_position": self._page_num_pos.currentText(),
         }
 
     def set_options(self, opts: dict) -> None:
@@ -830,9 +877,20 @@ class _OpcionesTab(QWidget):
             self._binding.setChecked(opts["binding_enabled"])
         if "binding_left_cm" in opts:
             self._binding_left.setValue(opts["binding_left_cm"])
+        if "page_size" in opts:
+            # Find matching page size
+            for i in range(self._page_size.count()):
+                if self._page_size.itemText(i).startswith(opts["page_size"]):
+                    self._page_size.setCurrentIndex(i)
+                    break
         if "alignment" in opts:
             idx = 1 if opts["alignment"] == "justificado" else 0
             self._alignment.setCurrentIndex(idx)
+        if "font_name" in opts:
+            for i in range(self._font_select.count()):
+                if self._font_select.itemText(i).startswith(opts["font_name"]):
+                    self._font_select.setCurrentIndex(i)
+                    break
         if "line_spacing" in opts:
             self._line_spacing.setValue(opts["line_spacing"])
         if "indent_cm" in opts:
@@ -843,6 +901,13 @@ class _OpcionesTab(QWidget):
             self._space_after.setValue(opts["space_after_pt"])
         if "include_toc" in opts:
             self._toc.setChecked(opts["include_toc"])
+        if "running_head" in opts:
+            self._running_head.setChecked(opts["running_head"])
+        if "page_num_position" in opts:
+            for i in range(self._page_num_pos.count()):
+                if self._page_num_pos.itemText(i) == opts["page_num_position"]:
+                    self._page_num_pos.setCurrentIndex(i)
+                    break
 
     def set_from_config(self, config) -> None:
         """Populate controls from an APAConfig instance."""
@@ -856,6 +921,13 @@ class _OpcionesTab(QWidget):
             self._binding_left.setValue(m.condicion_empaste.izquierda_cm)
         else:
             self._binding.setChecked(False)
+
+        # Page size from config
+        ps = config.configuracion_pagina.tamaño_papel
+        for i in range(self._page_size.count()):
+            if self._page_size.itemText(i).startswith(ps.nombre):
+                self._page_size.setCurrentIndex(i)
+                break
 
         tf = config.formato_texto
         self._alignment.setCurrentIndex(1 if tf.justificado else 0)
@@ -871,97 +943,34 @@ class _OpcionesTab(QWidget):
         self._margin_right.setValue(2.54)
         self._binding.setChecked(False)
         self._binding_left.setValue(4.0)
+        self._page_size.setCurrentIndex(0)
         self._alignment.setCurrentIndex(0)
+        self._font_select.setCurrentIndex(0)
         self._line_spacing.setValue(2.0)
         self._indent.setValue(1.27)
         self._space_before.setValue(0)
         self._space_after.setValue(0)
         self._toc.setChecked(False)
+        self._running_head.setChecked(False)
+        self._page_num_pos.setCurrentIndex(0)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# Stylesheet
+# Stylesheet — generated from theme
 # ═══════════════════════════════════════════════════════════════════════════
 
-_FORM_STYLE = """
-QTabWidget::pane {
-    border: 1px solid #CCCCCC;
-    background: white;
-}
-QTabBar::tab {
-    background: #ECECEC;
-    border: 1px solid #CCCCCC;
-    border-bottom: none;
-    padding: 6px 14px;
-    margin-right: 2px;
-    font-size: 10pt;
-}
-QTabBar::tab:selected {
-    background: white;
-    border-bottom: 2px solid #4A90D9;
-    font-weight: bold;
-}
-QTabBar::tab:hover {
-    background: #DDEEFF;
-}
-QLineEdit, QTextEdit, QPlainTextEdit, QDateEdit {
-    border: 1px solid #CCCCCC;
-    border-radius: 3px;
-    padding: 4px 6px;
-    background: white;
-    font-size: 10pt;
-}
-QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus {
-    border-color: #4A90D9;
-}
-QGroupBox {
-    font-weight: bold;
-    border: 1px solid #DDDDDD;
-    border-radius: 4px;
-    margin-top: 8px;
-    padding-top: 16px;
-}
-QGroupBox::title {
-    subcontrol-origin: margin;
-    left: 10px;
-    padding: 0 5px;
-}
-QPushButton {
-    background: #4A90D9;
-    color: white;
-    border: none;
-    border-radius: 3px;
-    padding: 5px 12px;
-    font-size: 9pt;
-}
-QPushButton:hover {
-    background: #357ABD;
-}
-QPushButton:pressed {
-    background: #2A5F9E;
-}
-QTreeWidget {
-    border: 1px solid #CCCCCC;
-    alternate-background-color: #F9F9F9;
-    font-size: 10pt;
-}
-QTreeWidget::item:selected {
-    background: #4A90D9;
-    color: white;
-}
-QListWidget {
-    border: 1px solid #CCCCCC;
-    font-size: 10pt;
-}
-QComboBox {
-    padding: 4px 8px;
-    border: 1px solid #BBBBBB;
-    border-radius: 3px;
-    background: white;
-}
-QCheckBox {
-    font-size: 11pt;
-    spacing: 8px;
-    padding: 8px;
-}
-"""
+
+def _get_form_style() -> str:
+    """Build form stylesheet from centralized theme."""
+    try:
+        from apa_formatter.gui.theme import Theme
+
+        return (
+            Theme.tab_widget()
+            + Theme.form_inputs()
+            + Theme.group_box()
+            + Theme.button_primary()
+            + Theme.table()
+        )
+    except ImportError:
+        return ""

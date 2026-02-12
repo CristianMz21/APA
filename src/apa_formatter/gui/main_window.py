@@ -22,7 +22,12 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QAction, QKeySequence
+
+from apa_formatter.gui.widgets.fixer_report import FixerReportPanel
+from apa_formatter.gui.widgets.language_switcher import LanguageSwitcher
+from apa_formatter.gui.widgets.navigation_tree import NavigationTree
 from PySide6.QtWidgets import (
+    QApplication,
     QCheckBox,
     QComboBox,
     QFileDialog,
@@ -65,20 +70,31 @@ class APAMainWindow(QMainWindow):
         self._user_settings: UserSettings = self._settings_manager.load()
 
         # --- Widgets -------------------------------------------------------
+        self.nav_tree = NavigationTree()
         self.form = DocumentFormWidget()
         self.preview = APAPreviewWidget()
+        self.fixer_panel = FixerReportPanel()
+        self.fixer_panel.setVisible(False)
+        self.fixer_panel.accepted.connect(self._on_auto_fix_accept)
+        self.fixer_panel.dismissed.connect(self._on_auto_fix_dismiss)
 
         # --- Layout --------------------------------------------------------
-        splitter = QSplitter(Qt.Orientation.Horizontal)
+        self._splitter = QSplitter(Qt.Orientation.Horizontal)
 
-        # Left panel: structured form
-        splitter.addWidget(self.form)
+        # Navigation tree (left sidebar)
+        self._splitter.addWidget(self.nav_tree)
 
-        # Right panel: preview
-        splitter.addWidget(self.preview)
-        splitter.setSizes([450, 700])
+        # Form panel
+        self._splitter.addWidget(self.form)
 
-        self.setCentralWidget(splitter)
+        # Preview panel (center)
+        self._splitter.addWidget(self.preview)
+
+        # Fixer report panel (right, hidden by default)
+        self._splitter.addWidget(self.fixer_panel)
+        self._splitter.setSizes([200, 350, 600, 0])
+
+        self.setCentralWidget(self._splitter)
 
         # --- Toolbar -------------------------------------------------------
         self._build_toolbar()
@@ -90,7 +106,17 @@ class APAMainWindow(QMainWindow):
         self.statusBar().showMessage("Listo — escribe texto y presiona Formatear")
 
         # --- Styling -------------------------------------------------------
-        self.setStyleSheet(_WINDOW_STYLE)
+        from apa_formatter.gui.theme import Theme, apply_theme
+
+        qapp = QApplication.instance()
+        if qapp:
+            apply_theme(qapp)
+
+        self.setStyleSheet(Theme.toolbar() + Theme.splitter())
+        self._splitter.setStyleSheet(Theme.splitter())
+
+        # Enable drag & drop for .docx files
+        self.setAcceptDrops(True)
 
         # --- Live preview debounce -----------------------------------------
         self._live_timer = QTimer(self)
@@ -135,6 +161,13 @@ class APAMainWindow(QMainWindow):
         act_format.triggered.connect(self._on_format_clicked)
         tb.addAction(act_format)
 
+        # Auto-fix button
+        act_autofix = QAction("✨ Auto-corregir", self)
+        act_autofix.setShortcut(QKeySequence("Ctrl+Shift+A"))
+        act_autofix.setToolTip("Ejecutar auto-corrección APA en el texto actual")
+        act_autofix.triggered.connect(self._on_auto_fix)
+        tb.addAction(act_autofix)
+
         tb.addSeparator()
 
         # Live preview toggle
@@ -149,8 +182,14 @@ class APAMainWindow(QMainWindow):
         # Active profile label
         self._profile_label = _label(" Perfil: APA 7 ")
         self._profile_label.setToolTip("Perfil de configuración activo")
-        self._profile_label.setStyleSheet("color: #4A90D9; font-weight: bold; font-size: 9pt;")
         tb.addWidget(self._profile_label)
+
+        tb.addSeparator()
+
+        # Language switcher
+        self._lang_switcher = LanguageSwitcher()
+        self._lang_switcher.language_changed.connect(self._on_language_changed)
+        tb.addWidget(self._lang_switcher)
 
     # ── Menu ──────────────────────────────────────────────────────────────
 
@@ -164,9 +203,9 @@ class APAMainWindow(QMainWindow):
         act_new.setShortcut(QKeySequence.StandardKey.New)
         act_new.triggered.connect(self._on_new)
 
-        act_import = file_menu.addAction("📥 Importar .docx…")
+        act_import = file_menu.addAction("📥 Importar documento…")
         act_import.setShortcut(QKeySequence("Ctrl+I"))
-        act_import.triggered.connect(self._on_import_docx)
+        act_import.triggered.connect(self._on_import_file)
 
         file_menu.addSeparator()
 
@@ -208,6 +247,14 @@ class APAMainWindow(QMainWindow):
 
     # ── Slots ─────────────────────────────────────────────────────────────
 
+    def _on_language_changed(self, lang_code: str) -> None:
+        """Switch application locale."""
+        from apa_formatter.locale import get_locale
+
+        locale = get_locale(lang_code)
+        self._current_locale = locale
+        self.statusBar().showMessage(f"🌐 Idioma: {locale.name}")
+
     def _on_live_toggled(self, checked: bool) -> None:
         self._live_enabled = checked
         if checked:
@@ -243,8 +290,13 @@ class APAMainWindow(QMainWindow):
 
     def _on_new(self) -> None:
         self.form.clear()
-        self.preview.clear()
         self._current_doc = None
+        self.nav_tree.clear()
+        # Reset preview with empty document
+        from PySide6.QtGui import QTextDocument
+
+        self.preview.show_document(QTextDocument())
+        self.preview.set_document_stats()
         self.statusBar().showMessage("Nuevo documento")
 
     def _on_format_clicked(self) -> None:
@@ -267,18 +319,183 @@ class APAMainWindow(QMainWindow):
         total_words = sum(len(s.content.split()) for s in doc.sections if s.content)
         if doc.abstract:
             total_words += len(doc.abstract.split())
+
+        # Feed stats to the preview status bar
+        self.preview.set_document_stats(
+            word_count=total_words,
+            section_count=len(doc.sections),
+            ref_count=len(doc.references),
+            font_name=self._font_choice.value,
+        )
+
         self.statusBar().showMessage(
             f"✅  Formato APA aplicado — {total_words} palabras, "
             f"{len(doc.sections)} sección(es), {len(doc.references)} referencia(s)"
         )
 
+        # Update navigation tree
+        self.nav_tree.set_document(doc)
+
+    # ── Auto-Fix ──────────────────────────────────────────────────────────
+
+    def _on_auto_fix(self) -> None:
+        """Run the APAAutoFormatter pipeline on all section text."""
+        # Gather text from all sections
+        sections_text = []
+        for i in range(self.form._sections_list.count()):
+            item = self.form._sections_list.item(i)
+            data = item.data(Qt.ItemDataRole.UserRole)
+            if data and data.get("content"):
+                sections_text.append(data["content"])
+
+        full_text = "\n\n".join(sections_text)
+        if not full_text.strip():
+            self.statusBar().showMessage("⚠️  Escribe texto primero")
+            return
+
+        # Import and run the pipeline in a background thread
+        from apa_formatter.automation.pipeline import APAAutoFormatter
+        from apa_formatter.gui.widgets.async_overlay import AsyncOverlay, AsyncWorker
+
+        formatter = APAAutoFormatter()
+        worker = AsyncWorker(formatter.run, full_text)
+
+        self._autofix_overlay = AsyncOverlay(self, "Analizando texto…")
+        self._autofix_overlay.run(worker)
+
+        worker.finished.connect(self._on_auto_fix_done)
+        worker.error.connect(self._on_auto_fix_error)
+
+        self.statusBar().showMessage("✨ Ejecutando auto-corrección…")
+
+    def _on_auto_fix_done(self, result) -> None:
+        """Handle auto-fix completion."""
+        from apa_formatter.automation.base import FixResult
+
+        if not isinstance(result, FixResult):
+            return
+
+        self._autofix_result = result
+
+        # Show fixer panel with results
+        self.fixer_panel.show_result(result)
+        self.fixer_panel.setVisible(True)
+        # Adjust splitter to show the panel (4-pane: nav, form, preview, fixer)
+        self._splitter.setSizes([200, 250, 450, 300])
+
+        n = result.total_fixes
+        self.statusBar().showMessage(
+            f"✨ Auto-corrección completada: {n} corrección{'es' if n != 1 else ''} encontrada{'s' if n != 1 else ''}"
+        )
+
+    def _on_auto_fix_error(self, exc) -> None:
+        """Handle auto-fix error."""
+        self.statusBar().showMessage(f"❌ Error en auto-corrección: {exc}")
+
+    def _on_auto_fix_accept(self) -> None:
+        """User accepted all auto-corrections — apply corrected text."""
+        result = self.fixer_panel.get_result()
+        if result and result.text:
+            # Apply the corrected text back to the first section
+            # (In a future version, map corrections to individual sections)
+            if self.form._sections_list.count() > 0:
+                item = self.form._sections_list.item(0)
+                data = item.data(Qt.ItemDataRole.UserRole) or {}
+                data["content"] = result.text
+                item.setData(Qt.ItemDataRole.UserRole, data)
+
+            self.statusBar().showMessage(f"✅ {result.total_fixes} correcciones aplicadas")
+
+        # Re-trigger live preview
+        if self._live_enabled:
+            self._on_live_preview()
+
+    def _on_auto_fix_dismiss(self) -> None:
+        """User dismissed the auto-fix results."""
+        self.fixer_panel.setVisible(False)
+        self._splitter.setSizes([200, 350, 600, 0])
+        self.statusBar().showMessage("Correcciones descartadas")
+
     # ── Export ─────────────────────────────────────────────────────────────
+
+    # ── Semantic bridge (APADocument → SemanticDocument) ────────────────
+
+    def _build_semantic_doc(self):  # -> SemanticDocument
+        """Convert the current APADocument into a SemanticDocument for validation."""
+        from apa_formatter.models.semantic_document import (
+            SemanticDocument,
+            TitlePageData,
+        )
+
+        doc = self._current_doc
+        tp = doc.title_page
+
+        title_data = TitlePageData(
+            title=tp.title,
+            authors=list(tp.authors),
+            affiliation=tp.affiliation or None,
+            course=tp.course,
+            instructor=tp.instructor,
+        )
+
+        # Map APADocument sections → SemanticDocument body_sections
+        from apa_formatter.domain.models.document import Section as DomainSection
+
+        body_sections = [
+            DomainSection(
+                heading=s.heading,
+                content=s.content,
+                level=s.level,
+                subsections=list(s.subsections),
+            )
+            for s in doc.sections
+        ]
+
+        return SemanticDocument(
+            title_page=title_data,
+            abstract=doc.abstract,
+            body_sections=body_sections,
+            references_parsed=list(doc.references),
+        )
+
+    def _run_export_guard(self) -> bool:
+        """Run pre-flight validation; return True if export should proceed."""
+        from apa_formatter.validators.export_validator import ExportValidator
+        from apa_formatter.gui.widgets.export_guard_dialog import ExportGuardDialog
+
+        try:
+            sem_doc = self._build_semantic_doc()
+        except Exception:
+            # If we can't build a SemanticDocument, skip validation
+            return True
+
+        validator = ExportValidator()
+        report = validator.validate(sem_doc)
+
+        if report.is_clean:
+            return True
+
+        dlg = ExportGuardDialog(report, parent=self)
+        return dlg.exec() == ExportGuardDialog.DialogCode.Accepted
 
     def _on_export_docx(self) -> None:
         if not self._current_doc:
             self.statusBar().showMessage("⚠️  Formatea primero el documento")
             return
 
+        # 1. Export Guard
+        if not self._run_export_guard():
+            self.statusBar().showMessage("🛡️  Exportación cancelada por la verificación")
+            return
+
+        # 2. AI Correction Prompt
+        if self._ask_ai_correction():
+            self._run_ai_correction(on_done=self._do_export_docx)
+        else:
+            self._do_export_docx()
+
+    def _do_export_docx(self) -> None:
+        """Perform the actual DOCX export (file dialog + generation)."""
         path, _ = QFileDialog.getSaveFileName(
             self,
             "Exportar a Word",
@@ -306,6 +523,18 @@ class APAMainWindow(QMainWindow):
             self.statusBar().showMessage("⚠️  Formatea primero el documento")
             return
 
+        if not self._run_export_guard():
+            self.statusBar().showMessage("🛡️  Exportación cancelada por la verificación")
+            return
+
+        # 2. AI Correction Prompt
+        if self._ask_ai_correction():
+            self._run_ai_correction(on_done=self._do_export_pdf)
+        else:
+            self._do_export_pdf()
+
+    def _do_export_pdf(self) -> None:
+        """Perform the actual PDF export."""
         path, _ = QFileDialog.getSaveFileName(
             self,
             "Exportar a PDF",
@@ -327,6 +556,83 @@ class APAMainWindow(QMainWindow):
             self.statusBar().showMessage(f"✅  Exportado: {path}")
         except Exception as exc:
             QMessageBox.critical(self, "Error de exportación", str(exc))
+
+    def _ask_ai_correction(self) -> bool:
+        """Ask user if they want to run AI correction."""
+        reply = QMessageBox.question(
+            self,
+            "Mejora con IA",
+            "¿Desea que la IA revise y corrija el documento antes de exportar?\n\n"
+            "Esto verificará el título (Title Case), resumen y palabras clave.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.Yes,
+        )
+        return reply == QMessageBox.StandardButton.Yes
+
+    def _run_ai_correction(self, on_done) -> None:
+        """Execute AI correction pipeline asynchronously."""
+        try:
+            from apa_formatter.infrastructure.ai.gemini_client import GeminiClient
+            from apa_formatter.infrastructure.ai.corrector import AiCorrector
+            from apa_formatter.gui.widgets.async_overlay import AsyncOverlay, AsyncWorker
+
+            # 1. Init Client
+            try:
+                client = GeminiClient()
+            except ValueError:
+                QMessageBox.warning(
+                    self,
+                    "API Key faltante",
+                    "No se encontró la clave de API de Gemini (GEMINI_API_KEY).\n"
+                    "Configure la variable de entorno o use el archivo .env.",
+                )
+                on_done()
+                return
+
+            corrector = AiCorrector(client)
+
+            # 2. Worker
+            def _bk_task():
+                return corrector.correct_document(self._current_doc)
+
+            worker = AsyncWorker(_bk_task)
+            overlay = AsyncOverlay(self, "IA analizando y corrigiendo...")
+
+            # 3. Completion Handler
+            def _on_finished(report):
+                changes = report.get("changes", [])
+                if changes:
+                    msg = "Correcciones realizadas:\n\n" + "\n".join(f"• {c}" for c in changes)
+                    QMessageBox.information(self, "IA Completada", msg)
+
+                    # Update UI
+                    self.form.set_document(self._current_doc)
+                    if self._live_enabled:
+                        self._on_live_preview()
+                else:
+                    self.statusBar().showMessage("✨ La IA no encontró problemas.")
+
+                # Proceed to actual export
+                on_done()
+
+            def _on_error(exc):
+                QMessageBox.warning(self, "Error AI", str(exc))
+                on_done()
+
+            worker.finished.connect(_on_finished)
+            worker.error.connect(_on_error)
+
+            overlay.run(worker)
+            self._ai_overlay = overlay  # keep ref
+
+        except ImportError:
+            QMessageBox.warning(
+                self, "Falta librería", "Instale el soporte AI: pip install 'apa-formatter[ai]'"
+            )
+            on_done()
+        except Exception as e:
+            QMessageBox.warning(self, "Error AI", str(e))
+            on_done()
 
     # ── Phase 3: APA Checker ──────────────────────────────────────────────
 
@@ -403,7 +709,7 @@ class APAMainWindow(QMainWindow):
 
     # ── Phase 5: DOCX Import ──────────────────────────────────────────────
 
-    def _on_import_docx(self) -> None:
+    def _on_import_file(self) -> None:
         from apa_formatter.gui.widgets.import_dialog import ImportDialog
 
         dlg = ImportDialog(self)
@@ -411,9 +717,54 @@ class APAMainWindow(QMainWindow):
             doc = dlg.get_document()
             if doc:
                 self.form.set_document(doc)
+
+                # Auto-apply detected config if requested
+                if dlg.auto_apply_config_requested():
+                    detected = dlg.get_detected_config()
+                    if detected:
+                        self._apply_detected_config(detected)
+
                 self.statusBar().showMessage(
-                    f"📥 Importado: {doc.title_page.title} — {len(doc.sections)} sección(es)"
+                    f"📥 Importado: {doc.title_page.title} — "
+                    f"{len(doc.sections)} sección(es), "
+                    f"{len(doc.references)} referencia(s)"
                 )
+
+    def _import_file(self, path: Path) -> None:
+        """Import a .docx or .pdf file directly (used by drag & drop)."""
+        from apa_formatter.gui.widgets.import_dialog import ImportDialog
+
+        dlg = ImportDialog(self, filepath=path)
+        if dlg.exec() == ImportDialog.DialogCode.Accepted:
+            doc = dlg.get_document()
+            if doc:
+                self.form.set_document(doc)
+                if dlg.auto_apply_config_requested():
+                    detected = dlg.get_detected_config()
+                    if detected:
+                        self._apply_detected_config(detected)
+                self.statusBar().showMessage(f"📥 Importado (drag & drop): {doc.title_page.title}")
+
+    def _apply_detected_config(self, detected) -> None:
+        """Apply auto-detected config values to the current options."""
+        opts = self.form._opciones.get_options()
+
+        if detected.line_spacing is not None:
+            opts["line_spacing"] = detected.line_spacing
+
+        if detected.detected_fonts:
+            # Update font choice if we recognize a known font
+            font_name = detected.detected_fonts[0].lower()
+            if "times" in font_name:
+                from apa_formatter.models.enums import FontChoice
+
+                self._font_choice = FontChoice.TIMES_NEW_ROMAN
+            elif "arial" in font_name or "calibri" in font_name:
+                from apa_formatter.models.enums import FontChoice
+
+                self._font_choice = FontChoice.ARIAL
+
+        self.form._opciones.set_options(opts)
 
     # ── Phase 6: Info & Demo ──────────────────────────────────────────────
 
@@ -436,6 +787,29 @@ class APAMainWindow(QMainWindow):
             "<p><b>Features:</b> Editor, Referencias, Check, Config, Import, Demo</p>",
         )
 
+    # ── Drag & Drop .docx / .pdf ──────────────────────────────────────────
+
+    _IMPORT_EXTENSIONS = (".docx", ".pdf")
+
+    def dragEnterEvent(self, event) -> None:  # noqa: N802
+        """Accept drag if it contains a .docx or .pdf file."""
+        if event.mimeData().hasUrls():
+            for url in event.mimeData().urls():
+                if url.toLocalFile().lower().endswith(self._IMPORT_EXTENSIONS):
+                    event.acceptProposedAction()
+                    return
+        event.ignore()
+
+    def dropEvent(self, event) -> None:  # noqa: N802
+        """Import the first supported file dropped onto the window."""
+        for url in event.mimeData().urls():
+            path = url.toLocalFile()
+            if path.lower().endswith(self._IMPORT_EXTENSIONS):
+                self._import_file(Path(path))
+                event.acceptProposedAction()
+                return
+        event.ignore()
+
 
 # ── Utilities ─────────────────────────────────────────────────────────────
 
@@ -447,54 +821,3 @@ def _label(text: str):
     lbl = QLabel(text)
     lbl.setStyleSheet("font-weight: bold; padding: 0 4px;")
     return lbl
-
-
-# ── Stylesheet ────────────────────────────────────────────────────────────
-
-_WINDOW_STYLE = """
-QMainWindow {
-    background-color: #F5F5F5;
-}
-QToolBar {
-    background-color: #ECECEC;
-    border-bottom: 1px solid #CCCCCC;
-    padding: 4px;
-    spacing: 6px;
-}
-QToolBar QToolButton {
-    background-color: #4A90D9;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    padding: 6px 16px;
-    font-weight: bold;
-    font-size: 11pt;
-}
-QToolBar QToolButton:hover {
-    background-color: #357ABD;
-}
-QToolBar QToolButton:pressed {
-    background-color: #2A5F9E;
-}
-QComboBox {
-    padding: 4px 8px;
-    border: 1px solid #BBBBBB;
-    border-radius: 3px;
-    background: white;
-    min-width: 150px;
-}
-QStatusBar {
-    background-color: #ECECEC;
-    border-top: 1px solid #CCCCCC;
-    font-size: 10pt;
-    padding: 2px 8px;
-}
-QMenuBar {
-    background-color: #ECECEC;
-    border-bottom: 1px solid #CCCCCC;
-}
-QMenuBar::item:selected {
-    background-color: #4A90D9;
-    color: white;
-}
-"""

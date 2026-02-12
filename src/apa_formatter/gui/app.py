@@ -20,6 +20,11 @@ def main() -> None:
     app.setApplicationName("APA 7 Formatter")
     app.setOrganizationName("apa-formatter")
 
+    # Apply centralized theme
+    from apa_formatter.gui.theme import apply_theme
+
+    apply_theme(app)
+
     window = APAMainWindow()
     window.show()
 

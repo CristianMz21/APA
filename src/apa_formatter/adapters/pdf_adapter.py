@@ -55,7 +55,7 @@ class APAPDF(FPDF):
 class PdfAdapter(BaseAdapter):
     """Generate APA 7 formatted PDF documents using fpdf2."""
 
-    def __init__(self, document: APADocument, config=None) -> None:
+    def __init__(self, document: APADocument, config=None, user_settings=None) -> None:
         super().__init__(document, config=config)
         self._font_spec = self._get_font_spec()
         self._setup_font_mapping()
@@ -84,6 +84,30 @@ class PdfAdapter(BaseAdapter):
             "Georgia": "Times",
         }
         self._mapped_font = font_map.get(self._font_spec.name, "Times")
+
+    # ------------------------------------------------------------------
+    # Internal Helpers
+    # ------------------------------------------------------------------
+
+    def _sanitize(self, text: str) -> str:
+        """Replace characters not supported by standard PDF fonts (Latin-1)."""
+        if not text:
+            return ""
+        # Common replacements for "smart" punctuation
+        replacements = {
+            "\u2013": "-",  # en-dash
+            "\u2014": "--",  # em-dash
+            "\u2018": "'",  # left single quote
+            "\u2019": "'",  # right single quote
+            "\u201c": '"',  # left double quote
+            "\u201d": '"',  # right double quote
+            "\u2026": "...",  # ellipsis
+        }
+        for char, repl in replacements.items():
+            text = text.replace(char, repl)
+
+        # Fallback: encode to latin-1, replace errors with '?'
+        return text.encode("latin-1", "replace").decode("latin-1")
 
     # ------------------------------------------------------------------
     # Public API
@@ -129,7 +153,9 @@ class PdfAdapter(BaseAdapter):
 
         # Title — bold, centered
         self._pdf.set_font(self._mapped_font, "B", self._font_spec.size_pt)
-        self._pdf.cell(0, self._line_h, tp.title, align="C", new_x="LMARGIN", new_y="NEXT")
+        self._pdf.cell(
+            0, self._line_h, self._sanitize(tp.title), align="C", new_x="LMARGIN", new_y="NEXT"
+        )
         self._pdf.ln(self._line_h)
 
         # Authors
@@ -139,22 +165,50 @@ class PdfAdapter(BaseAdapter):
             authors_text += f", and {tp.authors[-1]}"
         else:
             authors_text = tp.authors[0]
-        self._pdf.cell(0, self._line_h, authors_text, align="C", new_x="LMARGIN", new_y="NEXT")
+        self._pdf.cell(
+            0, self._line_h, self._sanitize(authors_text), align="C", new_x="LMARGIN", new_y="NEXT"
+        )
 
         # Affiliation
-        self._pdf.cell(0, self._line_h, tp.affiliation, align="C", new_x="LMARGIN", new_y="NEXT")
+        self._pdf.cell(
+            0,
+            self._line_h,
+            self._sanitize(tp.affiliation),
+            align="C",
+            new_x="LMARGIN",
+            new_y="NEXT",
+        )
 
         # Student fields
         if tp.variant == DocumentVariant.STUDENT:
             if tp.course:
-                self._pdf.cell(0, self._line_h, tp.course, align="C", new_x="LMARGIN", new_y="NEXT")
+                self._pdf.cell(
+                    0,
+                    self._line_h,
+                    self._sanitize(tp.course),
+                    align="C",
+                    new_x="LMARGIN",
+                    new_y="NEXT",
+                )
             if tp.instructor:
                 self._pdf.cell(
-                    0, self._line_h, tp.instructor, align="C", new_x="LMARGIN", new_y="NEXT"
+                    0,
+                    self._line_h,
+                    self._sanitize(tp.instructor),
+                    align="C",
+                    new_x="LMARGIN",
+                    new_y="NEXT",
                 )
             if tp.due_date:
                 date_str = tp.due_date.strftime("%B %d, %Y")
-                self._pdf.cell(0, self._line_h, date_str, align="C", new_x="LMARGIN", new_y="NEXT")
+                self._pdf.cell(
+                    0,
+                    self._line_h,
+                    self._sanitize(date_str),
+                    align="C",
+                    new_x="LMARGIN",
+                    new_y="NEXT",
+                )
 
     # ------------------------------------------------------------------
     # Abstract
@@ -169,7 +223,7 @@ class PdfAdapter(BaseAdapter):
 
         # Abstract text (no indent)
         self._pdf.set_font(self._mapped_font, "", self._font_spec.size_pt)
-        self._pdf.multi_cell(0, self._line_h, self.doc.abstract or "")
+        self._pdf.multi_cell(0, self._line_h, self._sanitize(self.doc.abstract or ""))
 
         # Keywords
         if self.doc.keywords:
@@ -178,7 +232,7 @@ class PdfAdapter(BaseAdapter):
             self._pdf.set_font(self._mapped_font, "I", self._font_spec.size_pt)
             self._pdf.write(self._line_h, "Keywords: ")
             self._pdf.set_font(self._mapped_font, "", self._font_spec.size_pt)
-            self._pdf.write(self._line_h, ", ".join(self.doc.keywords))
+            self._pdf.write(self._line_h, self._sanitize(", ".join(self.doc.keywords)))
             self._pdf.ln(self._line_h)
 
     # ------------------------------------------------------------------
@@ -230,10 +284,12 @@ class PdfAdapter(BaseAdapter):
 
         if style.inline:
             # Heading text with period, then content continues on same line
-            self._pdf.write(self._line_h, text + ". ")
+            self._pdf.write(self._line_h, self._sanitize(text + ". "))
             self._pdf.set_font(self._mapped_font, "", self._font_spec.size_pt)
         else:
-            self._pdf.cell(0, self._line_h, text, align=align, new_x="LMARGIN", new_y="NEXT")
+            self._pdf.cell(
+                0, self._line_h, self._sanitize(text), align=align, new_x="LMARGIN", new_y="NEXT"
+            )
 
     def _add_body_paragraph(self, text: str) -> None:
         """Add a body paragraph with first-line indent."""
@@ -244,7 +300,7 @@ class PdfAdapter(BaseAdapter):
         x_start = self._pdf.l_margin + indent
         self._pdf.set_x(x_start)
         # Use multi_cell for wrapping, but only indent the first line
-        self._pdf.multi_cell(0, self._line_h, text)
+        self._pdf.multi_cell(0, self._line_h, self._sanitize(text))
 
     # ------------------------------------------------------------------
     # References
@@ -276,7 +332,7 @@ class PdfAdapter(BaseAdapter):
             self._pdf.multi_cell(
                 w=self._pdf.w - self._pdf.l_margin - self._pdf.r_margin,
                 h=self._line_h,
-                text=ref_text,
+                text=self._sanitize(ref_text),
             )
 
     # ------------------------------------------------------------------
@@ -293,7 +349,12 @@ class PdfAdapter(BaseAdapter):
 
             if appendix.heading:
                 self._pdf.cell(
-                    0, self._line_h, appendix.heading, align="C", new_x="LMARGIN", new_y="NEXT"
+                    0,
+                    self._line_h,
+                    self._sanitize(appendix.heading),
+                    align="C",
+                    new_x="LMARGIN",
+                    new_y="NEXT",
                 )
 
             if appendix.content:

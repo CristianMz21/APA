@@ -29,7 +29,7 @@ share/python-wheels/
 venv/
 ENV/
 env/
-
+.env
 # ── IDE / Editor ─────────────────────────────────────────────
 .vscode/
 .idea/

@@ -25,6 +25,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from apa_formatter.gui.theme import Theme
+from apa_formatter.gui.widgets.reference_fetch import ReferenceFetchWidget
 from apa_formatter.models.document import Author, Reference
 from apa_formatter.models.enums import ReferenceType
 
@@ -99,6 +101,11 @@ class ReferenceDialog(QDialog):
         self._result_ref: Reference | None = None
 
         layout = QVBoxLayout(self)
+
+        # ── Smart fetch bar ────────────────────────────────────────────────
+        self._fetch_widget = ReferenceFetchWidget()
+        self._fetch_widget.reference_fetched.connect(self._on_reference_fetched)
+        layout.addWidget(self._fetch_widget)
 
         # ── Type selector ─────────────────────────────────────────────────
         type_row = QHBoxLayout()
@@ -249,7 +256,7 @@ class ReferenceDialog(QDialog):
         self._on_type_changed()  # initial visibility
         self._update_preview()
 
-        self.setStyleSheet(_DIALOG_STYLE)
+        self.setStyleSheet(Theme.dialog())
 
     # ── Populate from existing ────────────────────────────────────────────
 
@@ -289,6 +296,18 @@ class ReferenceDialog(QDialog):
         self._editors_group.setVisible("editors" in fields)
 
         self._update_preview()
+
+    # ── Fetch auto-populate ───────────────────────────────────────────────
+
+    def _on_reference_fetched(self, ref: object) -> None:
+        """Populate dialog fields from a fetched Reference."""
+        if not isinstance(ref, Reference):
+            return
+        # Clear existing data
+        self._authors_list.clear()
+        self._editors_list.clear()
+        # Populate from fetched reference
+        self._populate(ref)
 
     # ── Author management ─────────────────────────────────────────────────
 
@@ -402,50 +421,3 @@ def _set_form_row_visible(form: QFormLayout, widget: QWidget, visible: bool) -> 
             if label_item and label_item.widget():
                 label_item.widget().setVisible(visible)
             break
-
-
-# ── Stylesheet ────────────────────────────────────────────────────────────
-
-_DIALOG_STYLE = """
-QDialog {
-    background: white;
-}
-QGroupBox {
-    font-weight: bold;
-    border: 1px solid #DDDDDD;
-    border-radius: 4px;
-    margin-top: 8px;
-    padding-top: 16px;
-}
-QGroupBox::title {
-    subcontrol-origin: margin;
-    left: 10px;
-    padding: 0 5px;
-}
-QLineEdit, QDateEdit {
-    border: 1px solid #CCCCCC;
-    border-radius: 3px;
-    padding: 4px 6px;
-    font-size: 10pt;
-}
-QLineEdit:focus {
-    border-color: #4A90D9;
-}
-QPushButton {
-    background: #4A90D9;
-    color: white;
-    border: none;
-    border-radius: 3px;
-    padding: 4px 10px;
-    font-size: 9pt;
-}
-QPushButton:hover {
-    background: #357ABD;
-}
-QComboBox {
-    padding: 4px 8px;
-    border: 1px solid #BBBBBB;
-    border-radius: 3px;
-    background: white;
-}
-"""
