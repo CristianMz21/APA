@@ -216,9 +216,9 @@ class APAChecker:
                 )
             )
 
-        # Check space before/after
-        space_before = pf.space_before.pt if pf.space_before else None
-        space_after = pf.space_after.pt if pf.space_after else None
+        # Check space before/after — use `is not None` since Pt(0) is falsy
+        space_before = pf.space_before.pt if pf.space_before is not None else None
+        space_after = pf.space_after.pt if pf.space_after is not None else None
 
         results.append(
             CheckResult(
