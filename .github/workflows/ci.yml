@@ -6,39 +6,56 @@ on:
   pull_request:
     branches: ["main"]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   quality:
     name: Code Quality
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: "pip"
-          
+
       - name: Install dependencies
-        run: |
-          pip install .[dev]
-          
+        run: pip install .[dev]
+
       - name: Check Formatting (Ruff)
         run: ruff format --check .
-        
+
       - name: Lint Code (Ruff)
         run: ruff check .
-        
+
       - name: Type Check (mypy)
-        run: mypy src/ --ignore-missing-imports || true
-        
+        run: mypy src/ --ignore-missing-imports
+
       - name: Architecture Verification
         run: |
-            echo "=== Architecture Check ==="
-            # Domain -> Infra/Presentation (Forbidden)
-            ! grep -r "from apa_formatter\.\(infrastructure\|presentation\|adapters\|config\.loader\)" src/apa_formatter/domain/
-            # Application -> Infra/Presentation (Forbidden)
-            ! grep -r "from apa_formatter\.\(infrastructure\|presentation\)" src/apa_formatter/application/
+          set -e
+          echo "=== Architecture Check: Clean Architecture Dependency Rule ==="
+          echo "--- Domain must NOT import from Infrastructure or Presentation ---"
+          if grep -r "from apa_formatter\.\(infrastructure\|presentation\|adapters\|config\.loader\)" src/apa_formatter/domain/; then
+            echo "❌ VIOLATION: Domain layer imports from outer layers!"
+            exit 1
+          fi
+          echo "✅ Domain layer is clean"
+
+          echo "--- Application must NOT import from Infrastructure or Presentation ---"
+          if grep -r "from apa_formatter\.\(infrastructure\|presentation\)" src/apa_formatter/application/; then
+            echo "❌ VIOLATION: Application layer imports from outer layers!"
+            exit 1
+          fi
+          echo "✅ Application layer is clean"
+          echo "=== All architecture checks passed ==="
 
   tests:
     name: Tests (Python ${{ matrix.python-version }})
@@ -47,19 +64,26 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.10", "3.11", "3.12"]
-        
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
           cache: "pip"
-          
+
       - name: Install dependencies
-        run: |
-          pip install .[dev]
-          
-      - name: Run Tests
-        run: pytest
+        run: pip install .[dev]
+
+      - name: Run Tests with Coverage
+        run: pytest --cov=apa_formatter --cov-report=xml --cov-report=term-missing -v
+
+      - name: Upload Coverage Report
+        if: matrix.python-version == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
+          retention-days: 30
