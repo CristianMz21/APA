@@ -1,14 +1,21 @@
+# ── Python ────────────────────────────────────────────────────
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 .Python
+*.egg
+*.egg-info/
+.eggs/
+MANIFEST
+.installed.cfg
+
+# ── Build / Distribution ─────────────────────────────────────
 build/
 develop-eggs/
 dist/
 downloads/
 eggs/
-.eggs/
 lib/
 lib64/
 parts/
@@ -16,8 +23,39 @@ sdist/
 var/
 wheels/
 share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
 
+# ── Virtual Environments ─────────────────────────────────────
+.venv/
+venv/
+ENV/
+env/
+
+# ── IDE / Editor ─────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.settings/
+
+# ── Testing / Coverage ───────────────────────────────────────
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# ── mypy / type checking ─────────────────────────────────────
+.mypy_cache/
+.pytype/
+
+# ── OS files ──────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Project output (generated docs) ──────────────────────────
+*.docx
+*.pdf
+!src/apa_formatter/config/*.json

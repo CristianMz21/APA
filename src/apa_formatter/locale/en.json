@@ -1,0 +1,22 @@
+{
+    "and": "and",
+    "et_al": "et al.",
+    "nd": "n.d.",
+    "retrieved": "Retrieved",
+    "from": "from",
+    "in": "In",
+    "eds": "Eds.",
+    "ed": "Ed.",
+    "trans": "Trans.",
+    "personal_communication": "personal communication",
+    "as_cited_in": "as cited in",
+    "doctoral_dissertation": "Doctoral dissertation",
+    "masters_thesis": "Master's thesis",
+    "conference_presentation": "Conference presentation",
+    "no_date_parens": "(n.d.)",
+    "edition_abbr": "ed.",
+    "volume_abbr": "Vol.",
+    "pages_abbr": "pp.",
+    "page_abbr": "p.",
+    "report_no": "Report No."
+}

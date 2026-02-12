@@ -35,6 +35,8 @@ from PySide6.QtWidgets import (
 from apa_formatter.gui.rendering.apa_renderer import render_to_qtextdocument
 from apa_formatter.gui.widgets.document_form import DocumentFormWidget
 from apa_formatter.gui.widgets.preview import APAPreviewWidget
+from apa_formatter.config.loader import load_config
+from apa_formatter.config.models import APAConfig
 from apa_formatter.models.document import APADocument
 from apa_formatter.models.enums import (
     DocumentVariant,
@@ -54,6 +56,7 @@ class APAMainWindow(QMainWindow):
         self._current_doc: APADocument | None = None
         self._font_choice = FontChoice.TIMES_NEW_ROMAN
         self._variant = DocumentVariant.STUDENT
+        self._active_config: APAConfig = load_config()
 
         # --- Widgets -------------------------------------------------------
         self.form = DocumentFormWidget()
@@ -82,6 +85,10 @@ class APAMainWindow(QMainWindow):
 
         # --- Styling -------------------------------------------------------
         self.setStyleSheet(_WINDOW_STYLE)
+
+        # --- Sync OpcionesTab with default config --------------------------
+        self.form._opciones.set_from_config(self._active_config)
+        self.form._opciones.options_changed.connect(self._live_timer.start)
 
         # --- Live preview debounce -----------------------------------------
         self._live_timer = QTimer(self)
@@ -130,6 +137,14 @@ class APAMainWindow(QMainWindow):
         self._live_cb.setToolTip("Actualizar vista previa automáticamente")
         self._live_cb.toggled.connect(self._on_live_toggled)
         tb.addWidget(self._live_cb)
+
+        tb.addSeparator()
+
+        # Active profile label
+        self._profile_label = _label(" Perfil: APA 7 ")
+        self._profile_label.setToolTip("Perfil de configuración activo")
+        self._profile_label.setStyleSheet("color: #4A90D9; font-weight: bold; font-size: 9pt;")
+        tb.addWidget(self._profile_label)
 
     # ── Menu ──────────────────────────────────────────────────────────────
 
@@ -267,7 +282,7 @@ class APAMainWindow(QMainWindow):
         try:
             from apa_formatter.adapters.docx_adapter import DocxAdapter
 
-            adapter = DocxAdapter(self._current_doc)
+            adapter = DocxAdapter(self._current_doc, config=self._build_effective_config())
             adapter.generate(Path(path))
             self.statusBar().showMessage(f"✅  Exportado: {path}")
         except Exception as exc:
@@ -290,7 +305,7 @@ class APAMainWindow(QMainWindow):
         try:
             from apa_formatter.adapters.pdf_adapter import PdfAdapter
 
-            adapter = PdfAdapter(self._current_doc)
+            adapter = PdfAdapter(self._current_doc, config=self._build_effective_config())
             adapter.generate(Path(path))
             self.statusBar().showMessage(f"✅  Exportado: {path}")
         except Exception as exc:
@@ -310,7 +325,50 @@ class APAMainWindow(QMainWindow):
         from apa_formatter.gui.widgets.config_panel import ConfigPanel
 
         dlg = ConfigPanel(self)
+        dlg.config_changed.connect(self._on_config_changed)
         dlg.exec()
+
+    def _on_config_changed(self, config: APAConfig) -> None:
+        self._active_config = config
+        # Sync options tab with new profile values
+        self.form._opciones.set_from_config(config)
+        # Update profile label
+        name = "Custom"
+        if config.metadatos_norma:
+            name = config.metadatos_norma.institucion
+        elif config.metadata.norma == "APA":
+            name = f"APA {config.metadata.edicion}"
+        self._profile_label.setText(f" Perfil: {name} ")
+        self.statusBar().showMessage(f"✅  Perfil cambiado: {name}")
+
+    def _build_effective_config(self) -> APAConfig:
+        """Merge OpcionesTab overrides into the active config profile."""
+        opts = self.form._opciones.get_options()
+        data = self._active_config.model_dump()
+
+        # Page margins
+        data["configuracion_pagina"]["margenes"]["superior_cm"] = opts["margin_top_cm"]
+        data["configuracion_pagina"]["margenes"]["inferior_cm"] = opts["margin_bottom_cm"]
+        data["configuracion_pagina"]["margenes"]["izquierda_cm"] = opts["margin_left_cm"]
+        data["configuracion_pagina"]["margenes"]["derecha_cm"] = opts["margin_right_cm"]
+
+        if opts["binding_enabled"]:
+            data["configuracion_pagina"]["margenes"]["condicion_empaste"] = {
+                "descripcion": "Empaste habilitado",
+                "izquierda_cm": opts["binding_left_cm"],
+            }
+        else:
+            data["configuracion_pagina"]["margenes"]["condicion_empaste"] = None
+
+        # Text format
+        data["formato_texto"]["alineacion"] = opts["alignment"]
+        data["formato_texto"]["justificado"] = opts["alignment"] == "justificado"
+        data["formato_texto"]["interlineado_general"] = opts["line_spacing"]
+        data["formato_texto"]["sangria_parrafo"]["medida_cm"] = opts["indent_cm"]
+        data["formato_texto"]["espaciado_parrafos"]["anterior_pt"] = opts["space_before_pt"]
+        data["formato_texto"]["espaciado_parrafos"]["posterior_pt"] = opts["space_after_pt"]
+
+        return APAConfig.model_validate(data)
 
     # ── Phase 5: DOCX Import ──────────────────────────────────────────────
 

@@ -8,19 +8,25 @@ from apa_formatter.models.enums import (
 )
 from apa_formatter.models.document import (
     APADocument,
+    Author,
     Citation,
+    GroupAuthor,
     Reference,
     Section,
     TitlePage,
 )
+from apa_formatter.models.reference_manager import ReferenceManager
 
 __all__ = [
     "APADocument",
+    "Author",
     "Citation",
     "CitationType",
     "FontChoice",
+    "GroupAuthor",
     "HeadingLevel",
     "Reference",
+    "ReferenceManager",
     "ReferenceType",
     "Section",
     "TitlePage",

@@ -673,21 +673,125 @@ class _ReferenciasTab(QWidget):
 
 
 class _OpcionesTab(QWidget):
+    """Full settings panel with page, text, and document options."""
+
+    options_changed = Signal()
+
     def __init__(self) -> None:
         super().__init__()
         layout = QVBoxLayout(self)
 
+        # ── Página ────────────────────────────────────────────────────────
+        page_group = QGroupBox("Página")
+        pg = QFormLayout(page_group)
+        pg.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
+
+        from PySide6.QtWidgets import QDoubleSpinBox, QSpinBox
+
+        self._margin_top = QDoubleSpinBox()
+        self._margin_bottom = QDoubleSpinBox()
+        self._margin_left = QDoubleSpinBox()
+        self._margin_right = QDoubleSpinBox()
+        for sb in (self._margin_top, self._margin_bottom, self._margin_left, self._margin_right):
+            sb.setRange(0.5, 10.0)
+            sb.setSingleStep(0.1)
+            sb.setDecimals(2)
+            sb.setSuffix(" cm")
+            sb.setValue(2.54)
+            sb.valueChanged.connect(self.options_changed.emit)
+
+        pg.addRow("Margen superior:", self._margin_top)
+        pg.addRow("Margen inferior:", self._margin_bottom)
+        pg.addRow("Margen izquierda:", self._margin_left)
+        pg.addRow("Margen derecha:", self._margin_right)
+
+        # Binding margin
+        self._binding = QCheckBox("Empaste (margen izquierdo extendido)")
+        self._binding.toggled.connect(self._on_binding_toggled)
+        self._binding.toggled.connect(lambda: self.options_changed.emit())
+        pg.addRow(self._binding)
+
+        self._binding_left = QDoubleSpinBox()
+        self._binding_left.setRange(2.0, 8.0)
+        self._binding_left.setSingleStep(0.5)
+        self._binding_left.setDecimals(2)
+        self._binding_left.setSuffix(" cm")
+        self._binding_left.setValue(4.0)
+        self._binding_left.setEnabled(False)
+        self._binding_left.valueChanged.connect(self.options_changed.emit)
+        pg.addRow("  Margen empaste izq:", self._binding_left)
+
+        layout.addWidget(page_group)
+
+        # ── Texto ─────────────────────────────────────────────────────────
+        text_group = QGroupBox("Formato de Texto")
+        tg = QFormLayout(text_group)
+        tg.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
+
+        self._alignment = QComboBox()
+        self._alignment.addItems(["Izquierda", "Justificado"])
+        self._alignment.currentTextChanged.connect(lambda: self.options_changed.emit())
+        tg.addRow("Alineación:", self._alignment)
+
+        self._line_spacing = QDoubleSpinBox()
+        self._line_spacing.setRange(1.0, 3.0)
+        self._line_spacing.setSingleStep(0.5)
+        self._line_spacing.setDecimals(1)
+        self._line_spacing.setValue(2.0)
+        self._line_spacing.valueChanged.connect(self.options_changed.emit)
+        tg.addRow("Interlineado:", self._line_spacing)
+
+        self._indent = QDoubleSpinBox()
+        self._indent.setRange(0.0, 5.0)
+        self._indent.setSingleStep(0.1)
+        self._indent.setDecimals(2)
+        self._indent.setSuffix(" cm")
+        self._indent.setValue(1.27)
+        self._indent.valueChanged.connect(self.options_changed.emit)
+        tg.addRow("Sangría primera línea:", self._indent)
+
+        self._space_before = QSpinBox()
+        self._space_before.setRange(0, 24)
+        self._space_before.setSuffix(" pt")
+        self._space_before.setValue(0)
+        self._space_before.valueChanged.connect(self.options_changed.emit)
+        tg.addRow("Espacio antes párrafo:", self._space_before)
+
+        self._space_after = QSpinBox()
+        self._space_after.setRange(0, 24)
+        self._space_after.setSuffix(" pt")
+        self._space_after.setValue(0)
+        self._space_after.valueChanged.connect(self.options_changed.emit)
+        tg.addRow("Espacio después párrafo:", self._space_after)
+
+        layout.addWidget(text_group)
+
+        # ── Documento ─────────────────────────────────────────────────────
+        doc_group = QGroupBox("Documento")
+        dg = QVBoxLayout(doc_group)
+
         self._toc = QCheckBox("Incluir Tabla de Contenidos (TOC)")
-        layout.addWidget(self._toc)
+        self._toc.toggled.connect(lambda: self.options_changed.emit())
+        dg.addWidget(self._toc)
 
         tip = QLabel(
             "La TOC se inserta después de la portada y antes del resumen.\n"
             "En Word, actualice el campo al abrir el documento."
         )
         tip.setStyleSheet("color: #888; font-style: italic; font-size: 9pt;")
-        layout.addWidget(tip)
+        dg.addWidget(tip)
 
+        layout.addWidget(doc_group)
         layout.addStretch()
+
+    # ── Slots ─────────────────────────────────────────────────────────────
+
+    def _on_binding_toggled(self, checked: bool) -> None:
+        self._binding_left.setEnabled(checked)
+        if checked:
+            self._margin_left.setValue(self._binding_left.value())
+
+    # ── Public API ────────────────────────────────────────────────────────
 
     def get_include_toc(self) -> bool:
         return self._toc.isChecked()
@@ -695,7 +799,83 @@ class _OpcionesTab(QWidget):
     def set_include_toc(self, value: bool) -> None:
         self._toc.setChecked(value)
 
+    def get_options(self) -> dict:
+        """Return all option values as a flat dict."""
+        return {
+            "margin_top_cm": self._margin_top.value(),
+            "margin_bottom_cm": self._margin_bottom.value(),
+            "margin_left_cm": self._margin_left.value(),
+            "margin_right_cm": self._margin_right.value(),
+            "binding_enabled": self._binding.isChecked(),
+            "binding_left_cm": self._binding_left.value(),
+            "alignment": self._alignment.currentText().lower(),
+            "line_spacing": self._line_spacing.value(),
+            "indent_cm": self._indent.value(),
+            "space_before_pt": self._space_before.value(),
+            "space_after_pt": self._space_after.value(),
+            "include_toc": self._toc.isChecked(),
+        }
+
+    def set_options(self, opts: dict) -> None:
+        """Populate controls from a dict (e.g. from config)."""
+        if "margin_top_cm" in opts:
+            self._margin_top.setValue(opts["margin_top_cm"])
+        if "margin_bottom_cm" in opts:
+            self._margin_bottom.setValue(opts["margin_bottom_cm"])
+        if "margin_left_cm" in opts:
+            self._margin_left.setValue(opts["margin_left_cm"])
+        if "margin_right_cm" in opts:
+            self._margin_right.setValue(opts["margin_right_cm"])
+        if "binding_enabled" in opts:
+            self._binding.setChecked(opts["binding_enabled"])
+        if "binding_left_cm" in opts:
+            self._binding_left.setValue(opts["binding_left_cm"])
+        if "alignment" in opts:
+            idx = 1 if opts["alignment"] == "justificado" else 0
+            self._alignment.setCurrentIndex(idx)
+        if "line_spacing" in opts:
+            self._line_spacing.setValue(opts["line_spacing"])
+        if "indent_cm" in opts:
+            self._indent.setValue(opts["indent_cm"])
+        if "space_before_pt" in opts:
+            self._space_before.setValue(opts["space_before_pt"])
+        if "space_after_pt" in opts:
+            self._space_after.setValue(opts["space_after_pt"])
+        if "include_toc" in opts:
+            self._toc.setChecked(opts["include_toc"])
+
+    def set_from_config(self, config) -> None:
+        """Populate controls from an APAConfig instance."""
+        m = config.configuracion_pagina.margenes
+        self._margin_top.setValue(m.superior_cm)
+        self._margin_bottom.setValue(m.inferior_cm)
+        self._margin_left.setValue(m.izquierda_cm)
+        self._margin_right.setValue(m.derecha_cm)
+        if m.condicion_empaste:
+            self._binding.setChecked(True)
+            self._binding_left.setValue(m.condicion_empaste.izquierda_cm)
+        else:
+            self._binding.setChecked(False)
+
+        tf = config.formato_texto
+        self._alignment.setCurrentIndex(1 if tf.justificado else 0)
+        self._line_spacing.setValue(tf.interlineado_general)
+        self._indent.setValue(tf.sangria_parrafo.medida_cm)
+        self._space_before.setValue(tf.espaciado_parrafos.anterior_pt)
+        self._space_after.setValue(tf.espaciado_parrafos.posterior_pt)
+
     def clear(self) -> None:
+        self._margin_top.setValue(2.54)
+        self._margin_bottom.setValue(2.54)
+        self._margin_left.setValue(2.54)
+        self._margin_right.setValue(2.54)
+        self._binding.setChecked(False)
+        self._binding_left.setValue(4.0)
+        self._alignment.setCurrentIndex(0)
+        self._line_spacing.setValue(2.0)
+        self._indent.setValue(1.27)
+        self._space_before.setValue(0)
+        self._space_after.setValue(0)
         self._toc.setChecked(False)
 
 

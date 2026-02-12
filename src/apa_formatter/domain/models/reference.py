@@ -1,4 +1,13 @@
-"""Pydantic models for APA 7 document structure."""
+"""Reference-related domain models for APA 7.
+
+Contains Author, GroupAuthor, Reference, and Citation entities.
+These are Pydantic models (pragmatic choice — see implementation plan §6).
+
+This module belongs to the Domain layer. It only depends on:
+- Python stdlib (datetime, re, typing)
+- Pydantic (pragmatic exception for validation)
+- Domain enums (apa_formatter.domain.models.enums)
+"""
 
 from __future__ import annotations
 
@@ -9,55 +18,14 @@ import re
 
 from pydantic import BaseModel, Field, field_validator
 
-from apa_formatter.models.enums import (
+from apa_formatter.domain.models.enums import (
     CitationType,
-    DocumentVariant,
-    FontChoice,
-    HeadingLevel,
-    OutputFormat,
     ReferenceType,
 )
 
 
 # ---------------------------------------------------------------------------
-# Title Page
-# ---------------------------------------------------------------------------
-
-
-class TitlePage(BaseModel):
-    """APA 7 title page (student or professional variant)."""
-
-    title: str = Field(..., description="Paper title (bold, centered, title case)")
-    authors: list[str] = Field(..., min_length=1, description="Author name(s)")
-    affiliation: str = Field(..., description="Institutional affiliation")
-    course: Optional[str] = Field(None, description="Course number and name (student)")
-    instructor: Optional[str] = Field(None, description="Instructor name (student)")
-    due_date: Optional[date] = Field(None, description="Assignment due date (student)")
-    running_head: Optional[str] = Field(
-        None,
-        max_length=50,
-        description="Running head (professional only, ≤50 chars)",
-    )
-    author_note: Optional[str] = Field(None, description="Author note (professional)")
-    variant: DocumentVariant = DocumentVariant.STUDENT
-
-
-# ---------------------------------------------------------------------------
-# Sections & Headings
-# ---------------------------------------------------------------------------
-
-
-class Section(BaseModel):
-    """A document section with optional heading and content."""
-
-    heading: Optional[str] = Field(None, description="Section heading text")
-    level: HeadingLevel = HeadingLevel.LEVEL_1
-    content: str = Field("", description="Paragraph text for this section")
-    subsections: list[Section] = Field(default_factory=list)
-
-
-# ---------------------------------------------------------------------------
-# Citations & References
+# Authors
 # ---------------------------------------------------------------------------
 
 
@@ -105,6 +73,11 @@ class GroupAuthor(BaseModel):
     def apa_narrative(self) -> str:
         """Return group name for narrative citations."""
         return self.name
+
+
+# ---------------------------------------------------------------------------
+# Reference
+# ---------------------------------------------------------------------------
 
 
 class Reference(BaseModel):
@@ -461,12 +434,7 @@ class Reference(BaseModel):
     # -- main dispatch -------------------------------------------------------
 
     def _author_year_parts(self, locale: dict[str, str] | None = None) -> list[str]:
-        """Build the common [Author. (Year).] prefix.
-
-        When there is no author, APA 7 says the title moves to the author
-        position.  That is handled per-type in ``format_apa`` since the title
-        formatting (italic vs. not) depends on the reference type.
-        """
+        """Build the common [Author. (Year).] prefix."""
         parts: list[str] = []
         author_str = self.format_authors_apa()
         if author_str:
@@ -512,6 +480,11 @@ class Reference(BaseModel):
         if link:
             parts.append(link)
         return " ".join(parts)
+
+
+# ---------------------------------------------------------------------------
+# Citation
+# ---------------------------------------------------------------------------
 
 
 class Citation(BaseModel):
@@ -594,26 +567,3 @@ class Citation(BaseModel):
         author_str = self.authors[0] if self.authors else "Unknown"
         date_str = self.communication_date or nd
         return f"({author_str}, {pc}, {date_str})"
-
-
-# ---------------------------------------------------------------------------
-# Full Document
-# ---------------------------------------------------------------------------
-
-
-class APADocument(BaseModel):
-    """Complete APA 7 document model."""
-
-    title_page: TitlePage
-    abstract: Optional[str] = Field(
-        None, max_length=2500, description="Abstract (≤250 words, ~2500 chars)"
-    )
-    keywords: list[str] = Field(default_factory=list)
-    sections: list[Section] = Field(default_factory=list)
-    references: list[Reference] = Field(default_factory=list)
-    appendices: list[Section] = Field(default_factory=list)
-
-    # Formatting preferences
-    font: FontChoice = FontChoice.TIMES_NEW_ROMAN
-    output_format: OutputFormat = OutputFormat.DOCX
-    include_toc: bool = Field(False, description="Include Table of Contents page")

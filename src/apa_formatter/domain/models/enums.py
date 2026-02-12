@@ -1,4 +1,8 @@
-"""Enumerations for APA 7 document formatting."""
+"""Enumerations for APA 7 document formatting.
+
+This module is part of the Domain layer and has NO external dependencies
+beyond the Python standard library.
+"""
 
 from enum import Enum
 
