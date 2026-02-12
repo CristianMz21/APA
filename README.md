@@ -32,3 +32,8 @@ apa convert paper.docx --to pdf
 - ✅ Lista de referencias con sangría francesa
 - ✅ Generación Word (.docx) y PDF
 # APA
+
+## Licencia
+
+Este proyecto está licenciado bajo la Licencia Pública General de GNU v3.0 (GPLv3). Consulte el archivo [LICENSE](LICENSE) para más detalles.
+
