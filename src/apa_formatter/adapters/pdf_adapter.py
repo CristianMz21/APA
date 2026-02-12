@@ -7,8 +7,8 @@ from pathlib import Path
 from fpdf import FPDF
 
 from apa_formatter.adapters.base import BaseAdapter
-from apa_formatter.models.document import APADocument, Section
-from apa_formatter.models.enums import DocumentVariant, HeadingLevel
+from apa_formatter.domain.models.document import APADocument, Section
+from apa_formatter.domain.models.enums import DocumentVariant, HeadingLevel
 from apa_formatter.rules.constants import (
     FIRST_LINE_INDENT_INCHES,
     HEADING_STYLES,

@@ -7,7 +7,6 @@ GroupAuthor and the no-author edge case.
 
 from datetime import date
 
-import pytest
 
 from apa_formatter.models.document import (
     Author,

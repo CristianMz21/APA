@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          
+      - name: Install dependencies
+        run: |
+          pip install .[dev]
+          
+      - name: Check Formatting (Ruff)
+        run: ruff format --check .
+        
+      - name: Lint Code (Ruff)
+        run: ruff check .
+        
+      - name: Type Check (mypy)
+        run: mypy src/ --ignore-missing-imports || true
+        
+      - name: Architecture Verification
+        run: |
+            echo "=== Architecture Check ==="
+            # Domain -> Infra/Presentation (Forbidden)
+            ! grep -r "from apa_formatter\.\(infrastructure\|presentation\|adapters\|config\.loader\)" src/apa_formatter/domain/
+            # Application -> Infra/Presentation (Forbidden)
+            ! grep -r "from apa_formatter\.\(infrastructure\|presentation\)" src/apa_formatter/application/
+
+  tests:
+    name: Tests (Python ${{ matrix.python-version }})
+    needs: quality
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+        
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+          
+      - name: Install dependencies
+        run: |
+          pip install .[dev]
+          
+      - name: Run Tests
+        run: pytest

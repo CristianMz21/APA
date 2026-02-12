@@ -88,28 +88,27 @@ class InfoDemoDialog(QDialog):
             cfg = get_config()
             lines = [
                 "═══ Configuración APA 7 Activa ═══\n",
-                f"📐 Márgenes:      {cfg.page.margins.top}″ (todos los lados)",
-                f"📏 Interlineado:  {cfg.text.line_spacing}",
-                f"📝 Sangría:       {cfg.text.first_line_indent}″ primera línea",
-                f"📖 Tamaño fuente: {cfg.text.font_size}pt",
+                f"📐 Márgenes:      {cfg.configuracion_pagina.margenes.superior_cm}cm (todos los lados)",
+                f"📏 Interlineado:  {cfg.formato_texto.interlineado_general}",
+                f"📝 Sangría:       {cfg.formato_texto.sangria_parrafo.medida_cm}cm primera línea",
+                "📖 Tamaño fuente: Variable (ver abajo)",
                 "",
-                "── Fuentes disponibles ──",
+                "── Fuentes disponibles y tamaños ──",
             ]
-            for font in FontChoice:
-                lines.append(f"  • {font.value}")
+            for font in cfg.fuentes_aceptadas:
+                lines.append(f"  • {font.nombre} ({font.tamaño_pt}pt)")
             lines.extend(
                 [
                     "",
                     "── Niveles de encabezado ──",
                 ]
             )
-            for level in cfg.headings:
-                hcfg = cfg.headings[level]
+            for hcfg in cfg.jerarquia_titulos:
                 lines.append(
-                    f"  {level}: "
-                    f"{'bold' if hcfg.bold else ''} "
-                    f"{'italic' if hcfg.italic else ''} "
-                    f"align={hcfg.alignment}"
+                    f"  Nivel {hcfg.nivel}: "
+                    f"{'Negrita' if hcfg.formato.negrita else ''} "
+                    f"{'Cursiva' if hcfg.formato.cursiva else ''} "
+                    f"align={hcfg.formato.alineacion}"
                 )
             self._info_text.setPlainText("\n".join(lines))
         except Exception as exc:
@@ -127,11 +126,19 @@ class InfoDemoDialog(QDialog):
             return
 
         try:
-            from apa_formatter.cli import _build_demo_document, _generate_document
+            from apa_formatter.bootstrap import Container
 
-            doc = _build_demo_document(FontChoice.TIMES_NEW_ROMAN, fmt)
-            cfg = get_config()
-            result = _generate_document(doc, Path(dest), cfg)
+            # Use clean architecture stack
+            container = Container()
+
+            # 1. Generate demo document object (domain)
+            generate_demo_uc = container.generate_demo()
+            doc = generate_demo_uc.execute(FontChoice.TIMES_NEW_ROMAN, fmt)
+
+            # 2. Render to file (application/infrastructure)
+            create_doc_uc = container.create_document(fmt)
+            result = create_doc_uc.execute(doc, Path(dest))
+
             self._demo_status.setText(f"✅ Demo generado: {result}")
             self._demo_status.setStyleSheet("font-size: 9pt; color: #27ae60;")
         except Exception as exc:

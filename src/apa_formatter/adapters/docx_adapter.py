@@ -11,8 +11,8 @@ from docx.oxml.ns import qn
 from docx.shared import Inches, Pt, RGBColor
 
 from apa_formatter.adapters.base import BaseAdapter
-from apa_formatter.models.document import APADocument, Section
-from apa_formatter.models.enums import DocumentVariant, HeadingLevel
+from apa_formatter.domain.models.document import APADocument, Section
+from apa_formatter.domain.models.enums import DocumentVariant, HeadingLevel
 from apa_formatter.rules.constants import (
     FIRST_LINE_INDENT_INCHES,
     HANGING_INDENT_INCHES,
@@ -348,6 +348,10 @@ class DocxAdapter(BaseAdapter):
     # References
     # ------------------------------------------------------------------
 
+    # ------------------------------------------------------------------
+    # References
+    # ------------------------------------------------------------------
+
     def _build_references(self) -> None:
         """Generate the APA 7 reference list."""
         self._add_page_break()
@@ -369,25 +373,48 @@ class DocxAdapter(BaseAdapter):
 
         for ref in sorted_refs:
             ref_text = ref.format_apa()
-            ref_p = self._add_paragraph("")
+            ref_p = self._add_paragraph("")  # Empty paragraph
             ref_p.paragraph_format.first_line_indent = Inches(-HANGING_INDENT_INCHES)
             ref_p.paragraph_format.left_indent = Inches(HANGING_INDENT_INCHES)
 
-            # Parse italic markers (*text*) in the formatted reference
-            self._add_formatted_run(ref_p, ref_text)
+            # Use shared markdown parser
+            self._add_markdown_run(ref_p, ref_text)
 
-    def _add_formatted_run(self, paragraph, text: str) -> None:
-        """Add text to a paragraph, handling *italic* markers."""
-        parts = text.split("*")
-        for i, part in enumerate(parts):
-            if not part:
-                continue
-            run = paragraph.add_run(part)
-            run.font.name = self._font_spec.name
-            run.font.size = Pt(self._font_spec.size_pt)
-            # Odd-indexed parts are italic (between * markers)
-            if i % 2 == 1:
-                run.italic = True
+    def _add_markdown_run(self, paragraph, text: str) -> None:
+        """Add text to paragraph, parsing **bold** and *italic* markdown."""
+        import re
+
+        # Regex for **bold** or *italic*
+        pattern = re.compile(r"(\*\*[^*]+\*\*)|(\*[^*]+\*)")
+
+        last_pos = 0
+        for match in pattern.finditer(text):
+            # Prefix plain text
+            if match.start() > last_pos:
+                self._add_run(paragraph, text[last_pos : match.start()])
+
+            content = match.group()
+            if content.startswith("**"):
+                self._add_run(paragraph, content[2:-2], bold=True)
+            else:
+                self._add_run(paragraph, content[1:-1], italic=True)
+
+            last_pos = match.end()
+
+        # Suffix
+        if last_pos < len(text):
+            self._add_run(paragraph, text[last_pos:])
+
+    def _add_run(self, paragraph, text: str, bold: bool = False, italic: bool = False):
+        """Helper to add a run with correct font settings."""
+        run = paragraph.add_run(text)
+        run.font.name = self._font_spec.name
+        run.font.size = Pt(self._font_spec.size_pt)
+        if bold:
+            run.bold = True
+        if italic:
+            run.italic = True
+        return run
 
     # ------------------------------------------------------------------
     # Appendices
@@ -424,17 +451,20 @@ class DocxAdapter(BaseAdapter):
     # ------------------------------------------------------------------
 
     def _add_paragraph(self, text: str):
-        """Add a paragraph with default APA body style."""
-        return self._docx.add_paragraph(text, style="Normal")
+        """Add a paragraph with default APA body style.
+
+        If text contains markdown, it will be parsed.
+        """
+        p = self._docx.add_paragraph("", style="Normal")
+        if text:
+            self._add_markdown_run(p, text)
+        return p
 
     def _add_centered_text(self, text: str):
         """Add a centered paragraph (no indent)."""
-        p = self._add_paragraph("")
+        p = self._add_paragraph(text)
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
         p.paragraph_format.first_line_indent = Inches(0)
-        run = p.add_run(text)
-        run.font.name = self._font_spec.name
-        run.font.size = Pt(self._font_spec.size_pt)
         return p
 
     def _add_centered_empty(self):

@@ -86,10 +86,6 @@ class APAMainWindow(QMainWindow):
         # --- Styling -------------------------------------------------------
         self.setStyleSheet(_WINDOW_STYLE)
 
-        # --- Sync OpcionesTab with default config --------------------------
-        self.form._opciones.set_from_config(self._active_config)
-        self.form._opciones.options_changed.connect(self._live_timer.start)
-
         # --- Live preview debounce -----------------------------------------
         self._live_timer = QTimer(self)
         self._live_timer.setSingleShot(True)
@@ -97,6 +93,10 @@ class APAMainWindow(QMainWindow):
         self._live_timer.timeout.connect(self._on_live_preview)
         self.form.document_changed.connect(self._live_timer.start)
         self._live_enabled = True
+
+        # --- Sync OpcionesTab with default config --------------------------
+        self.form._opciones.set_from_config(self._active_config)
+        self.form._opciones.options_changed.connect(self._live_timer.start)
 
     # ── Toolbar ────────────────────────────────────────────────────────────
 

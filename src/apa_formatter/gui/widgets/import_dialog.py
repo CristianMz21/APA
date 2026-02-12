@@ -89,15 +89,16 @@ class ImportDialog(QDialog):
     def _try_import(self, path: Path) -> None:
         self._log.clear()
         try:
-            from apa_formatter.converters import _extract_content
+            from apa_formatter.converters.extractor import extract_content_with_formatting
 
-            doc = _extract_content(path)
+            doc = extract_content_with_formatting(path)
             self._result_doc = doc
-            self._log.append(f"✅ Importado exitosamente: {path.name}")
+            self._log.append(f"✅ Importado con formato: {path.name}")
             self._log.append(f"   Título: {doc.title_page.title}")
             self._log.append(f"   Autores: {', '.join(doc.title_page.authors)}")
             self._log.append(f"   Secciones: {len(doc.sections)}")
-            self._log.append(f"   Referencias: {len(doc.references)}")
+            if doc.references:
+                self._log.append(f"   Referencias: {len(doc.references)}")
             self._buttons.button(QDialogButtonBox.StandardButton.Ok).setEnabled(True)
         except ImportError:
             # Fallback: try basic extraction

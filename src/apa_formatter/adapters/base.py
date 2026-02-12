@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Optional
 
 from apa_formatter.config import APAConfig, get_config
-from apa_formatter.models.document import APADocument
+from apa_formatter.domain.models.document import APADocument
 
 
 class BaseAdapter(ABC):

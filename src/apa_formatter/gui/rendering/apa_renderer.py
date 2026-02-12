@@ -216,21 +216,24 @@ def _render_section(
         cursor.insertText(heading_text)
 
         # For inline headings (L4/L5), body text continues on the same line
+
         if inline and section.content:
             cursor.insertText("  ")
-            cursor.setCharFormat(base_char)
-            cursor.insertText(section.content)
+            # cursor.setCharFormat(base_char) -> handled by markdown renderer
+            _render_markdown_text(cursor, section.content, base_char)
         elif section.content:
             # Body paragraph with first-line indent
             body_block = QTextBlockFormat(base_block)
             body_block.setTextIndent(INDENT_PX)
             cursor.insertBlock(body_block, base_char)
-            cursor.insertText(section.content)
+            # cursor.insertText(section.content) -> handled by markdown renderer
+            _render_markdown_text(cursor, section.content, base_char)
     elif section.content:
         body_block = QTextBlockFormat(base_block)
         body_block.setTextIndent(INDENT_PX)
         cursor.insertBlock(body_block, base_char)
-        cursor.insertText(section.content)
+        # cursor.insertText(section.content)
+        _render_markdown_text(cursor, section.content, base_char)
 
     # Recurse into subsections
     for sub in section.subsections:
@@ -262,8 +265,45 @@ def _render_references(
         cursor.insertBlock(hanging, base_char)
 
         # We need to parse the formatted string to apply italic to titles
-        # For now, insert plain text — Phase 3 will add inline italic spans
         ref_text = ref.format_apa()
-        # Strip markdown-style asterisks for the preview
-        ref_text = ref_text.replace("*", "")
-        cursor.insertText(ref_text)
+        _render_markdown_text(cursor, ref_text, base_char)
+
+
+def _render_markdown_text(cursor: QTextCursor, text: str, base_char: QTextCharFormat) -> None:
+    """Render text with basic markdown support (**bold**, *italic*)."""
+    import re
+
+    # Pattern to match **bold** or *italic*
+    # Group 1: **bold**
+    # Group 2: *italic*
+    pattern = re.compile(r"(\*\*[^*]+\*\*)|(\*[^*]+\*)")
+
+    last_pos = 0
+    for match in pattern.finditer(text):
+        # Text before match
+        prefix = text[last_pos : match.start()]
+        if prefix:
+            cursor.setCharFormat(base_char)
+            cursor.insertText(prefix)
+
+        # Match content
+        content = match.group()
+        fmt = QTextCharFormat(base_char)
+
+        if content.startswith("**"):
+            fmt.setFontWeight(QFont.Weight.Bold)
+            clean_text = content[2:-2]
+        else:
+            fmt.setFontItalic(True)
+            clean_text = content[1:-1]
+
+        cursor.setCharFormat(fmt)
+        cursor.insertText(clean_text)
+
+        last_pos = match.end()
+
+    # Remaining text
+    suffix = text[last_pos:]
+    if suffix:
+        cursor.setCharFormat(base_char)
+        cursor.insertText(suffix)

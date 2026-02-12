@@ -1,6 +1,5 @@
 """Tests for internationalization (i18n) support — Sprint 4."""
 
-import pytest
 
 from apa_formatter.locale import get_locale
 from apa_formatter.models.document import Author, Citation, Reference

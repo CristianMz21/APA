@@ -1,21 +1,27 @@
-"""APA 7 document data models."""
+"""APA 7 document data models (Re-exported from Domain).
 
-from apa_formatter.models.enums import (
+This module provides backward compatibility for existing code that imports from
+`apa_formatter.models`. The actual definitions have moved to `apa_formatter.domain.models`.
+"""
+
+from apa_formatter.domain.models.document import (
+    APADocument,
+    Section,
+    TitlePage,
+)
+from apa_formatter.domain.models.enums import (
     CitationType,
     FontChoice,
     HeadingLevel,
     ReferenceType,
 )
-from apa_formatter.models.document import (
-    APADocument,
+from apa_formatter.domain.models.reference import (
     Author,
     Citation,
     GroupAuthor,
     Reference,
-    Section,
-    TitlePage,
 )
-from apa_formatter.models.reference_manager import ReferenceManager
+from apa_formatter.domain.models.reference_manager import ReferenceManager
 
 __all__ = [
     "APADocument",

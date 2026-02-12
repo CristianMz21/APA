@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-import json
 from unittest.mock import MagicMock, patch
 
 import pytest
 from pydantic import ValidationError
 
-from apa_formatter.models.document import Author, Reference
+from apa_formatter.models.document import Reference
 from apa_formatter.models.enums import ReferenceType
 from apa_formatter.fetchers.isbn_fetcher import (
     ISBNFetchError,
@@ -206,7 +205,7 @@ class TestDOIFetcher:
         mock_resp.raise_for_status = MagicMock()
         mock_get.return_value = mock_resp
 
-        ref = fetch_by_doi("https://doi.org/10.1234/test")
+        fetch_by_doi("https://doi.org/10.1234/test")
         # Ensure the CrossRef URL used bare DOI
         call_url = mock_get.call_args[0][0]
         assert call_url == "https://api.crossref.org/works/10.1234/test"

@@ -206,8 +206,9 @@ Puedes integrar el formateador en tus scripts de Python:
 
 ```python
 from datetime import date
-from apa_formatter.models.document import APADocument, TitlePage, Section, Reference
-from apa_formatter.adapters.docx_adapter import DocxAdapter
+from apa_formatter.bootstrap import Container
+from apa_formatter.domain.models.document import APADocument, TitlePage, Section
+from apa_formatter.domain.models.enums import OutputFormat
 
 # 1. Definir la metadata
 doc = APADocument(
@@ -226,23 +227,25 @@ doc = APADocument(
     ]
 )
 
-# 2. Generar el archivo
-adapter = DocxAdapter(doc)
-adapter.generate("mi_paper.docx")
+# 2. Inicializar el contenedor de dependencias
+container = Container()
+
+# 3. Obtener el caso de uso para crear documentos y ejecutarlo
+# Se puede especificar OutputFormat.DOCX o OutputFormat.PDF
+use_case = container.create_document(OutputFormat.DOCX)
+use_case.execute(doc, "mi_paper.docx")
 ```
 
 ## Estructura del Proyecto
 
 - `src/apa_formatter/`: Código fuente principal.
-  - `models/`: Definiciones de datos (Documento, Referencia, Enums).
-  - `adapters/`: Generadores de archivos (Docx, PDF).
-  - `config/`: Archivos y lógica de configuración (incluye `sena_default.json`).
-  - `validators/`: Lógica de verificación y reglas de cumplimiento.
-  - `rules/`: Constantes de formato APA 7 (márgenes, fuentes, estilos).
-  - `citations/`: Lógica de citas in-text.
-  - `converters/`: Conversión entre formatos.
-  - `gui/`: Interfaz gráfica PySide6 (editor, preview, herramientas).
-- `tests/`: Pruebas automatizadas (117 tests).
+  - `domain/`: Reglas de negocio y modelos (Núcleo de la arquitectura, sin dependencias externas).
+  - `application/`: Casos de uso y orquestación (interactúan con el dominio).
+  - `infrastructure/`: Implementaciones concretas de puertos (E/S, Configuración, Persistencia, Renderizadores).
+  - `presentation/`: Interfaces de entrada (CLI con Typer, GUI con PySide6).
+  - `bootstrap.py`: Contenedor de inyección de dependencias (Composition Root).
+  - `config/`: Utilidades de carga de configuración.
+- `tests/`: Pruebas automatizadas.
 
 ## Licencia
 
